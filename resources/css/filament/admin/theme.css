@@ -1,0 +1,105 @@
+/* 1. Подтягиваем стандартную тему Filament (готовый скомпилированный CSS) */
+@import "../../vendor/filament/filament/resources/css/theme.css";
+
+/* 2. Ниже — ТОЛЬКО обычный CSS поверх */
+
+/* Фон панели */
+body.fi-body {
+    background-color: #f3f4f6; /* светло-серый */
+}
+
+.fi-main {
+    background-color: #f3f4f6;
+}
+
+/* ----- Сайдбар ----- */
+
+.fi-sidebar {
+    background-color: #020617; /* почти чёрный */
+    color: #e5e7eb;
+}
+
+.fi-sidebar-header {
+    border-bottom: 1px solid #1e293b;
+}
+
+.fi-brand {
+    color: #fbbf24;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+}
+
+.fi-sidebar-item-button {
+    border-radius: 0.5rem;
+}
+
+.fi-sidebar-item-button:hover {
+    background-color: #1e293b;
+}
+
+.fi-sidebar-item-button.fi-active {
+    background-color: #f59e0b;
+    color: #0f172a;
+}
+
+/* ----- Топбар ----- */
+
+.fi-topbar {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* ----- Кнопки ----- */
+
+.fi-btn.fi-btn-primary {
+    border-radius: 9999px;
+    font-weight: 500;
+}
+
+.fi-btn.fi-btn-primary:hover {
+    opacity: 0.9;
+}
+
+/* ----- Секции / таблицы ----- */
+
+.fi-section {
+    border-radius: 1rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.fi-ta-table {
+    font-size: 0.875rem;
+}
+
+.fi-ta-table thead {
+    background-color: #f9fafb;
+}
+
+.fi-ta-table th {
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.fi-ta-table td {
+    vertical-align: middle;
+}
+
+/* ----- Аккаунт в правом верхнем углу ----- */
+
+.fi-account-dropdown-trigger {
+    background-color: #020617;
+    color: #e5e7eb;
+    border-radius: 9999px;
+}
+
+/* ----- Хлебные крошки ----- */
+
+.fi-breadcrumbs-item {
+    color: #6b7280;
+}
+
+.fi-breadcrumbs-item-current {
+    color: #0f172a;
+    font-weight: 500;
+}
