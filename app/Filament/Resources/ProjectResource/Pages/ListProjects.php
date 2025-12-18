@@ -12,10 +12,8 @@ class ListProjects extends ListRecords
 
     protected function getHeaderActions(): array
     {
-         return [
-            Actions\CreateAction::make()
-                ->label('Add project')   // 🔹 текст кнопки над таблицей
-                ->icon('heroicon-o-plus'), // (необязательно) иконка
+        return [
+            Actions\CreateAction::make(),
         ];
     }
 }

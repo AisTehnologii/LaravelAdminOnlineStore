@@ -4,12 +4,17 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\CardResource\Pages;
 use App\Models\Card;
+use App\Models\ContentSection;
+use App\Support\TableExport;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
-use Filament\Resources\Resource;
+use Filament\Tables\Grouping\Group;
+use Illuminate\Database\Eloquent\Builder;
 
 class CardResource extends Resource
 {
@@ -20,100 +25,147 @@ class CardResource extends Resource
     protected static ?string $navigationLabel = 'Cards';
     protected static ?int    $navigationSort  = 30;
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canViewAny();
+    }
+
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Карточка «What We Do»')
-                    ->description('Карточки с иконкой, заголовком и описанием в блоке «What We Do».')
-                    ->schema([
-                        Forms\Components\Grid::make(3)->schema([
-                            Forms\Components\Select::make('locale')
-                                ->label('Язык')
-                                ->options([
-                                    'en' => 'English',
-                                    'ru' => 'Русский',
-                                    'ro' => 'Română',
-                                ])
-                                ->default('en')
-                                ->required(),
-
-                            Forms\Components\TextInput::make('position')
-                                ->label('Порядковый номер')
-                                ->numeric()
-                                ->minValue(1)
-                                ->required(),
-
-                            Forms\Components\FileUpload::make('image_path')
-                                ->label('Иконка / картинка')
-                                ->image()
-                                ->directory('cards')
-                                ->imagePreviewHeight('120')
-                                ->helperText('Картинка в кружочке над заголовком.'),
-                        ]),
-
-                        Forms\Components\TextInput::make('title')
-                            ->label('Заголовок')
-                            ->maxLength(255)
-                            ->required(),
-
-                        Forms\Components\Textarea::make('description')
-                            ->label('Описание')
-                            ->rows(3)
-                            ->helperText('Краткий текст под заголовком.'),
+        return $form->schema([
+            Forms\Components\Grid::make(3)->schema([
+                Forms\Components\Select::make('section_id')
+                    ->label('Section')
+                    ->relationship(
+                        name: 'section',
+                        titleAttribute: 'title',
+                        modifyQueryUsing: fn (Builder $query) => $query->where('type', 'card')->orderBy('position')
+                    )
+                    ->preload()
+                    ->searchable()
+                    ->required()
+                    ->createOptionForm([
+                        Forms\Components\Hidden::make('type')->default('card'),
+                        Forms\Components\TextInput::make('title')->required()->maxLength(255),
+                        Forms\Components\TextInput::make('slug')->required()->maxLength(255),
+                        Forms\Components\TextInput::make('position')->numeric()->default(1),
+                        Forms\Components\Toggle::make('is_active')->default(true),
                     ]),
-            ]);
+
+                Forms\Components\Select::make('locale')
+                    ->label('Locale')
+                    ->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română'])
+                    ->default('en')
+                    ->required(),
+
+                Forms\Components\TextInput::make('position')
+                    ->label('Position')
+                    ->numeric()
+                    ->default(0)
+                    ->required(),
+            ]),
+
+            Forms\Components\TextInput::make('title')->required()->maxLength(255),
+
+            Forms\Components\Textarea::make('description')->rows(4)->nullable(),
+
+            Forms\Components\FileUpload::make('image_path')
+                ->label('Image')
+                ->image()
+                ->directory('cards')
+                ->nullable(),
+        ]);
     }
 
     public static function table(Table $table): Table
     {
+        $type = 'card';
+
         return $table
-            ->columns([
-                Tables\Columns\TextColumn::make('position')
-                    ->label('#')
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('locale')
-                    ->label('Locale')
-                    ->badge()
-                    ->sortable(),
-
-                Tables\Columns\ImageColumn::make('image_path')
-                    ->label('Image')
-                    ->square(),
-
-                Tables\Columns\TextColumn::make('title')
-                    ->label('Title')
-                    ->limit(40)
-                    ->searchable(),
-
-                Tables\Columns\TextColumn::make('description')
-                    ->label('Text')
-                    ->limit(60)
-                    ->toggleable(),
-
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Updated at')
-                    ->dateTime('Y-m-d H:i')
-                    ->sortable(),
-            ])
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('section')->orderBy('section_id')->orderBy('position'))
+            ->groups([Group::make('section.title')->label('Section')->collapsible()->titlePrefixedWithLabel(false)])
+            ->defaultGroup('section.title')
             ->defaultSort('position')
+            ->headerActions([
+                Tables\Actions\Action::make('export')
+                    ->label('Экспорт данных')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->modalHeading('Экспорт данных')
+                    ->form([
+                        Forms\Components\Select::make('scope')
+                            ->label('Что экспортировать?')
+                            ->options(['all' => 'Все секции', 'section' => 'Только выбранную секцию'])
+                            ->default('all')->required()->live(),
+                        Forms\Components\Select::make('section_id')
+                            ->label('Секция')
+                            ->options(fn () => ContentSection::query()->where('type', $type)->orderBy('position')->pluck('title', 'id')->toArray())
+                            ->visible(fn (callable $get) => $get('scope') === 'section')
+                            ->searchable(),
+                        Forms\Components\Select::make('format')
+                            ->label('Формат')
+                            ->options(['pdf' => 'PDF', 'xml' => 'XML'])
+                            ->default('pdf')->required(),
+                    ])
+                    ->action(function (array $data, $livewire) {
+                        $columns = [
+                            'section.title' => 'Section',
+                            'locale'        => 'Locale',
+                            'position'      => 'Position',
+                            'title'         => 'Title',
+                            'description'   => 'Description',
+                            'updated_at'    => 'Updated at',
+                        ];
+
+                        $query = method_exists($livewire, 'getFilteredTableQuery')
+                            ? $livewire->getFilteredTableQuery()
+                            : Card::query();
+
+                        $query->with('section')->orderBy('section_id')->orderBy('position');
+
+                        if (($data['scope'] ?? 'all') === 'section' && !empty($data['section_id'])) {
+                            $query->where('section_id', $data['section_id']);
+                        }
+
+                        $rows = $query->get();
+                        $title = 'Cards export';
+                        $subtitle = now()->format('Y-m-d H:i');
+
+                        if (($data['format'] ?? 'pdf') === 'xml') {
+                            $xml = TableExport::toXml('export', 'row', $columns, $rows);
+
+                            return response($xml, 200, [
+                                'Content-Type'        => 'application/xml; charset=UTF-8',
+                                'Content-Disposition' => 'attachment; filename="cards_' . now()->format('Ymd_His') . '.xml"',
+                            ]);
+                        }
+
+                        $pdf = Pdf::loadView('exports.table-pdf', compact('title', 'subtitle', 'columns', 'rows'));
+
+                        return response()->streamDownload(
+                            fn () => print($pdf->output()),
+                            'cards_' . now()->format('Ymd_His') . '.pdf'
+                        );
+                    }),
+            ])
+            ->columns([
+                Tables\Columns\TextColumn::make('locale')->badge()->sortable(),
+                Tables\Columns\TextColumn::make('position')->sortable(),
+                Tables\Columns\ImageColumn::make('image_path')->square()->label('Image'),
+                Tables\Columns\TextColumn::make('title')->searchable()->limit(40),
+                Tables\Columns\TextColumn::make('updated_at')->dateTime('Y-m-d H:i')->sortable(),
+            ])
             ->filters([
-                SelectFilter::make('locale')
-                    ->label('Locale')
-                    ->options([
-                        'en' => 'English',
-                        'ru' => 'Русский',
-                        'ro' => 'Română',
-                    ]),
+                SelectFilter::make('section_id')
+                    ->label('Section')
+                    ->relationship(
+                        name: 'section',
+                        titleAttribute: 'title',
+                        modifyQueryUsing: fn (Builder $query) => $query->where('type', $type)->orderBy('position')
+                    ),
+                SelectFilter::make('locale')->label('Locale')->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română']),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
-            ]);
+            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()])
+            ->bulkActions([Tables\Actions\DeleteBulkAction::make()]);
     }
 
     public static function getPages(): array

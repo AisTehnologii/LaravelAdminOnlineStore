@@ -13,9 +13,7 @@ class ListSliders extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()
-                ->label('Add slide')   // 🔹 текст кнопки над таблицей
-                ->icon('heroicon-o-plus'), // (необязательно) иконка
+            Actions\CreateAction::make(),
         ];
     }
 }

@@ -1,0 +1,35 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('banners', function (Blueprint $table) {
+            $table->id();
+
+            $table->foreignId('section_id')
+                ->nullable()
+                ->constrained('content_sections')
+                ->nullOnDelete();
+
+            // как раньше
+            $table->unsignedInteger('position')->default(1);
+            $table->string('locale', 5)->default('en');
+            $table->string('title');
+            $table->text('text')->nullable();
+            $table->string('image_path')->nullable();
+
+            $table->timestamps();
+
+            $table->index(['section_id', 'locale', 'position']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('banners');
+    }
+};

@@ -13,8 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             \App\Http\Middleware\SetLocaleFromRequest::class,
+
+            // ✅ Maintenance (глобально для WEB)
+            \App\Http\Middleware\MaintenanceMode::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+    ->create();

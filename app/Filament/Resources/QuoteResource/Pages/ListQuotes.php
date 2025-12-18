@@ -13,9 +13,7 @@ class ListQuotes extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()
-                ->label('Add quote')   // 🔹 текст кнопки над таблицей
-                ->icon('heroicon-o-plus'), // (необязательно) иконка
+            Actions\CreateAction::make(),
         ];
     }
 }
