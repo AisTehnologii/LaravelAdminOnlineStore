@@ -12,7 +12,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
-use Illuminate\Database\Eloquent\Builder;
 
 class ContentSectionResource extends Resource
 {
@@ -30,14 +29,19 @@ class ContentSectionResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\Select::make('type')->required()->options([
-                'banner'    => 'Banners',
-                'slider'    => 'Sliders',
-                'card'      => 'Cards',
-                'project'   => 'Projects',
-                'quote'     => 'Quotes',
-                'blog_card' => 'Blog Cards',
-            ]),
+            Forms\Components\Select::make('type')
+                ->required()
+                ->options([
+                    'banner'    => 'Banners',
+                    'slider'    => 'Sliders',
+                    'card'      => 'Cards',
+                    'project'   => 'Projects',
+                    'quote'     => 'Quotes',
+                    'blog_card' => 'Blog Cards',
+                    'promo'     => 'Promo Blocks',
+                    'catalog'   => 'Catalog', // ✅ ДОБАВИЛИ
+                ]),
+
             Forms\Components\TextInput::make('title')->required()->maxLength(255),
             Forms\Components\TextInput::make('slug')->required()->maxLength(255)->unique(ignoreRecord: true),
             Forms\Components\TextInput::make('position')->numeric()->default(1)->required(),
@@ -73,6 +77,8 @@ class ContentSectionResource extends Resource
                                 'project'   => 'Projects',
                                 'quote'     => 'Quotes',
                                 'blog_card' => 'Blog Cards',
+                                'promo'     => 'Promo Blocks',
+                                'catalog'   => 'Catalog', // ✅ ДОБАВИЛИ
                             ])
                             ->visible(fn (callable $get) => $get('scope') === 'type')
                             ->required(fn (callable $get) => $get('scope') === 'type'),
@@ -140,9 +146,14 @@ class ContentSectionResource extends Resource
                         'project'   => 'Projects',
                         'quote'     => 'Quotes',
                         'blog_card' => 'Blog Cards',
+                        'promo'     => 'Promo Blocks',
+                        'catalog'   => 'Catalog', // ✅ ДОБАВИЛИ
                     ]),
             ])
-            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()]);
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()
+            ]);
     }
 
     public static function getPages(): array

@@ -1,626 +1,714 @@
-<!DOCTYPE html>
-<html lang="{{ app()->getLocale() }}">
-<head>
-  <title>@yield('title', 'Marga')</title>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+@extends('front.layouts.app')
 
-  <link href="https://fonts.googleapis.com/css?family=DM+Sans:300,400,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ asset('marga/fonts') }}/icomoon/style.css">
+@section('title', 'Главная')
 
-  <link rel="stylesheet" href="{{ asset('marga/css') }}/bootstrap.min.css">
-  <link rel="stylesheet" href="{{ asset('marga/css') }}/animate.min.css">
-  <link rel="stylesheet" href="{{ asset('marga/css') }}/jquery.fancybox.min.css">
-  <link rel="stylesheet" href="{{ asset('marga/css') }}/owl.carousel.min.css">
-  <link rel="stylesheet" href="{{ asset('marga/css') }}/owl.theme.default.min.css">
-  <link rel="stylesheet" href="{{ asset('marga/fonts') }}/flaticon/font/flaticon.css">
-  <link rel="stylesheet" href="{{ asset('marga/css') }}/aos.css">
+@section('content')
+         <!-- ========= REVSLIDER ========== -->
+            @if(($sectionActive['home-hero'] ?? false) && $banners->count())
+<section id="revslider" class="fullwidthbanner-container">
+    <div class="fullwidthbanner">
+        <ul>
 
-  <link rel="stylesheet" href="{{ asset('marga/css') }}/style.css">
+            @foreach($banners as $banner)
+                <li data-transition="slidehorizontal" data-bgpositionend="center bottom">
 
-  @php
-    $locale = app()->getLocale();
+                    <img src="{{ asset('storage/'.$banner->image_path) }}" alt="{{ $banner->title ?? '' }}"/>
 
-    $isAdmin = false;
-    if (function_exists('filament')) {
-        $isAdmin = filament()->auth()->check();
-    } else {
-        $isAdmin = auth()->check();
-    }
-  @endphp
+                    {{-- ✅ ОПИСАНИЕ СВЕРХУ (как в верстке) --}}
+                    @if(!empty($banner->text))
+                        <div
+                            class="tp-caption h5 normal-weight caption lfl whitefont"
+                            data-easing="easeOutBack"
+                            data-speed="1000"
+                            data-start="500"
+                            data-y="center"
+                            data-x="left"
+                            data-hoffset="100"
+                            data-voffset="-68">
+                            {{ $banner->text }}
+                        </div>
+                    @endif
 
-  <style>
-    #home-section, #about-section, #services-section, #projects-section, #testimonials-section, #blog-section, #contact-section {
-      scroll-margin-top: 110px;
-    }
+                    {{-- ✅ ЗАГОЛОВОК --}}
+                    @if(!empty($banner->title))
+                        <div
+                            class="tp-caption text-uppercase h0 normal-weight caption lfl whitefont"
+                            data-easing="easeOutBack"
+                            data-speed="1000"
+                            data-start="500"
+                            data-y="center"
+                            data-x="left"
+                            data-hoffset="100"
+                            data-voffset="-26">
+                            {{ $banner->title }}
+                        </div>
+                    @endif
 
-    .projects-viewall {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .04em;
-      text-decoration: none;
-    }
-    .projects-viewall::before,
-    .projects-viewall::after { content: none !important; display: none !important; }
-    .projects-viewall .arrow { display: inline-flex; line-height: 1; transform: translateY(-1px); }
-
-    .hero-cta-wrap { margin-top: 18px; }
-    .hero-cta {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      white-space: nowrap;
-      min-width: 160px;
-    }
-
-    body.edit-mode [data-editable] {
-      outline: 2px dashed rgba(255, 200, 0, 0.65);
-      outline-offset: 6px;
-      position: relative;
-    }
-
-    .edit-controls {
-      display: none;
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 50;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    body.edit-mode .edit-controls { display: inline-flex; }
-
-    .edit-controls a {
-      background: rgba(10, 10, 10, 0.92);
-      color: #fff !important;
-      font-size: 12px;
-      padding: 6px 10px;
-      border-radius: 10px;
-      text-decoration: none !important;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      line-height: 1;
-    }
-    .edit-controls a:hover {
-      transform: translateY(-1px);
-      border-color: rgba(255, 200, 0, 0.35);
-    }
-
-    #edit-mode-toggle {
-      position: fixed;
-      top: 90px;
-      right: 24px;
-      z-index: 9999;
-      background: rgba(10, 10, 10, 0.92);
-      color: #fff;
-      padding: 10px 14px;
-      border-radius: 999px;
-      font-size: 13px;
-      cursor: pointer;
-      user-select: none;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-    #edit-mode-toggle .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: rgba(255, 200, 0, 0.9);
-      box-shadow: 0 0 14px rgba(255, 200, 0, 0.55);
-    }
-    body.edit-mode #edit-mode-toggle {
-      border-color: rgba(255, 200, 0, 0.35);
-      box-shadow: 0 0 22px rgba(255, 200, 0, 0.12);
-    }
-  </style>
-</head>
-
-<body data-spy="scroll" data-target=".site-navbar-target" data-offset="300">
-
-@if($isAdmin)
-  <div id="edit-mode-toggle">
-    <span class="dot"></span>
-    <span>Режим правок</span>
-  </div>
-@endif
-
-<div class="site-wrap" id="home-section">
-
-  <div class="site-mobile-menu site-navbar-target">
-    <div class="site-mobile-menu-header">
-      <div class="site-mobile-menu-close mt-3">
-        <span class="icon-close2 js-menu-toggle"></span>
-      </div>
-    </div>
-    <div class="site-mobile-menu-body"></div>
-  </div>
-
-  <header class="site-navbar site-navbar-target bg-white" role="banner" data-editable>
-    @if($isAdmin)
-      <div class="edit-controls">
-        <a href="{{ url('/admin/content-blocks?section=layout.header&locale='.$locale) }}" target="_blank">✏️ Шапка (тексты)</a>
-      </div>
-    @endif
-
-    <div class="container">
-      <div class="row align-items-center position-relative">
-
-        <div class="col-lg-4">
-          <nav class="site-navigation text-right ml-auto" role="navigation">
-            <ul class="site-menu main-menu js-clone-nav ml-auto d-none d-lg-block">
-
-              <li class="active"><a href="#home-section" class="nav-link">{!! $layoutHeader['menu_left_home'] ?? 'Home' !!}</a></li>
-
-              @if(($sectionActive['home-projects'] ?? false))
-                <li><a href="#projects-section" class="nav-link">{!! $layoutHeader['menu_left_projects'] ?? 'Projects' !!}</a></li>
-              @endif
-
-              @if(($sectionActive['home-services'] ?? false))
-                <li><a href="#services-section" class="nav-link">{!! $layoutHeader['menu_left_services'] ?? 'Services' !!}</a></li>
-              @endif
-
-            </ul>
-          </nav>
-        </div>
-
-        <div class="col-lg-4 text-center">
-          <div class="site-logo">
-            <a href="{{ url('/') }}">
-              {!! $layoutHeader['logo_text'] ?? 'Marga' !!}
-            </a>
-          </div>
-
-          <div class="ml-auto toggle-button d-inline-block d-lg-none">
-            <a href="#" class="site-menu-toggle py-5 js-menu-toggle text-white">
-              <span class="icon-menu h3 text-primary"></span>
-            </a>
-          </div>
-        </div>
-
-        <div class="col-lg-4">
-          <nav class="site-navigation text-left mr-auto" role="navigation">
-            <ul class="site-menu main-menu js-clone-nav ml-auto d-none d-lg-block">
-
-              @if(($sectionActive['home-about-slider'] ?? false))
-                <li><a href="#about-section" class="nav-link">{!! $layoutHeader['menu_right_about'] ?? 'About' !!}</a></li>
-              @endif
-
-              @if(($sectionActive['home-blog'] ?? false))
-                <li><a href="#blog-section" class="nav-link">{!! $layoutHeader['menu_right_blog'] ?? 'Blog' !!}</a></li>
-              @endif
-
-              @if(($sectionActive['layout-footer'] ?? true))
-                <li><a href="#contact-section" class="nav-link">{!! $layoutHeader['menu_right_contact'] ?? 'Contact' !!}</a></li>
-              @endif
-
-              <li class="has-children">
-                <a href="#" class="nav-link">{{ strtoupper($locale) }}</a>
-                <ul class="dropdown">
-                  <li><a href="{{ route('set-locale', 'en') }}">EN</a></li>
-                  <li><a href="{{ route('set-locale', 'ru') }}">RU</a></li>
-                  <li><a href="{{ route('set-locale', 'ro') }}">RO</a></li>
-                </ul>
-              </li>
-
-            </ul>
-          </nav>
-        </div>
-
-      </div>
-    </div>
-  </header>
-
-  {{-- ✅ HERO / BANNERS (целиком скрывается если секция выключена) --}}
-  @if(($sectionActive['home-hero'] ?? false) && $banners->count())
-    <div class="owl-carousel-wrapper" data-editable>
-      @if($isAdmin)
-        <div class="edit-controls">
-          <a href="{{ url('/admin/banners') }}" target="_blank">🖼 Баннеры</a>
-          <a href="{{ url('/admin/content-blocks?section=layout.header&locale='.$locale) }}" target="_blank">✏️ Кнопка/шапка</a>
-        </div>
-      @endif
-
-      <div class="box-92819">
-        <div class="owl-carousel slide-one-item-alt-text">
-          @foreach($banners as $banner)
-            <div class="d-flex align-items-center" style="min-height: 400px;">
-              <div>
-                <h1 class="text-uppercase mb-3">{{ $banner->title }}</h1>
-
-                @if($banner->text)
-                  <p class="mb-5">{!! nl2br(e($banner->text)) !!}</p>
-                @endif
-              </div>
-            </div>
-          @endforeach
-        </div>
-
-        <div class="hero-cta-wrap">
-          <a href="#contact-section" class="btn btn-primary rounded-0 hero-cta">
-            {!! $layoutHeader['hero_button_contact'] ?? 'Contact Us' !!}
-          </a>
-        </div>
-      </div>
-
-      <div class="owl-carousel owl-1">
-        @foreach($banners as $banner)
-          <div class="ftco-cover-1" style="background-image: url('{{ asset('storage/' . $banner->image_path) }}');"></div>
-        @endforeach
-      </div>
-    </div>
-  @endif
-
-
-  {{-- ✅ ABOUT + SLIDER (целиком скрывается если секция выключена) --}}
-  @if(($sectionActive['home-about-slider'] ?? false))
-    <div class="site-section" id="about-section" data-editable>
-      @if($isAdmin)
-        <div class="edit-controls">
-          <a href="{{ url('/admin/content-blocks?section=home.about_card&locale='.$locale) }}" target="_blank">✏️ About (тексты)</a>
-          <a href="{{ url('/admin/sliders') }}" target="_blank">🖼 About (слайдер)</a>
-        </div>
-      @endif
-
-      <div class="container">
-        <div class="row align-items-stretch">
-          <div class="col-lg-4">
-            <div class="h-100 bg-white box-29291">
-              <h2 class="heading-39291">
-                {!! $aboutCard['home.about_card.title'] ?? 'Welcome To <br> Our Company' !!}
-              </h2>
-
-              {!! $aboutCard['home.about_card.text_1'] ?? '<p>Lorem ipsum dolor sit amet...</p>' !!}
-              {!! $aboutCard['home.about_card.text_2'] ?? '<p>Alias odit ipsam quas...</p>' !!}
-
-              <p class="mt-5">
-                <span class="d-block font-weight-bold text-black">
-                  {!! $aboutCard['home.about_card.name'] ?? 'Bruce Smith' !!}
-                </span>
-                <span class="d-block font-weight-bold text-muted">
-                  {!! $aboutCard['home.about_card.role'] ?? 'Founder, CEO' !!}
-                </span>
-
-                <img src="{{ asset('marga/images') }}/signature.svg" alt="Image" class="img-fluid" width="140">
-              </p>
-            </div>
-          </div>
-
-          <div class="col-lg-8">
-            <div class="owl-carousel owl-3">
-              @forelse($sliders as $slide)
-                @if($slide->image_path)
-                  <img src="{{ asset('storage/' . $slide->image_path) }}" alt="{{ $slide->id }}" class="img-fluid">
-                @endif
-              @empty
-                <img src="{{ asset('marga/images') }}/about_1.jpg" alt="Image" class="img-fluid">
-                <img src="{{ asset('marga/images') }}/about_2.jpg" alt="Image" class="img-fluid">
-                <img src="{{ asset('marga/images') }}/about_3.jpg" alt="Image" class="img-fluid">
-              @endforelse
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  @endif
-
-
-  {{-- ✅ WHAT WE DO / SERVICES --}}
-  @if(($sectionActive['home-services'] ?? false) && $cards->count())
-    <div class="site-section" id="services-section" data-editable>
-      @if($isAdmin)
-        <div class="edit-controls">
-          <a href="{{ url('/admin/cards') }}" target="_blank">🧩 Карточки</a>
-          <a href="{{ url('/admin/content-blocks?section=home.sections&locale='.$locale) }}" target="_blank">✏️ Заголовки секций</a>
-        </div>
-      @endif
-
-      <div class="container">
-        <div class="row mb-5 align-items-center">
-          <div class="col-md-7">
-            <h2 class="heading-39291 mb-0">{!! $homeSections['what_we_do_title'] ?? 'What We Do' !!}</h2>
-          </div>
-        </div>
-
-        <div class="row">
-          @foreach($cards as $index => $card)
-            <div class="col-md-6 mb-4 col-lg-4" data-aos="fade-up" data-aos-delay="{{ ($index % 3) * 100 }}">
-              <div class="service-29193 text-center" data-editable>
-                @if($isAdmin)
-                  <div class="edit-controls">
-                    <a href="{{ url('/admin/cards/'.$card->id.'/edit') }}" target="_blank">✏️ Карточка</a>
-                  </div>
-                @endif
-
-                <span class="img-wrap mb-5">
-                  @if($card->image_path)
-                    <img src="{{ asset('storage/' . $card->image_path) }}" alt="{{ $card->title }}" class="img-fluid">
-                  @else
-                    <img src="{{ asset('marga/fonts/flaticon/svg/001-stairs.svg') }}" alt="{{ $card->title }}" class="img-fluid">
-                  @endif
-                </span>
-
-                <h3 class="mb-4"><a href="#">{{ $card->title }}</a></h3>
-                @if($card->description) <p>{{ $card->description }}</p> @endif
-              </div>
-            </div>
-          @endforeach
-        </div>
-
-      </div>
-    </div>
-  @endif
-
-
-  {{-- ✅ OUR PROJECTS --}}
-  @if(($sectionActive['home-projects'] ?? false) && $projects->count())
-    <div class="site-section" id="projects-section" data-editable>
-      @if($isAdmin)
-        <div class="edit-controls">
-          <a href="{{ url('/admin/projects') }}" target="_blank">📁 Проекты</a>
-          <a href="{{ url('/admin/content-blocks?section=home.sections&locale='.$locale) }}" target="_blank">✏️ Заголовки секций</a>
-        </div>
-      @endif
-
-      <div class="container">
-        <div class="row mb-5 align-items-center">
-          <div class="col-md-7">
-            <h2 class="heading-39291 mb-0">{!! $homeSections['our_projects_title'] ?? 'Our Projects' !!}</h2>
-          </div>
-          <div class="col-md-5 text-right">
-            <p class="mb-0">
-              <a href="#projects-section" class="projects-viewall">
-                <span class="more-39291__text">{!! $homeSections['our_projects_view_all'] ?? 'View All Projects' !!}</span>
-                <span class="arrow" aria-hidden="true">→</span>
-              </a>
-            </p>
-          </div>
-        </div>
-
-        <div class="row">
-          @foreach($projects as $project)
-            <div class="col-lg-6">
-              <div class="media-02819" data-editable>
-                @if($isAdmin)
-                  <div class="edit-controls">
-                    <a href="{{ url('/admin/projects/'.$project->id.'/edit') }}" target="_blank">✏️ Проект</a>
-                  </div>
-                @endif
-
-                @if($project->image_path)
-                  <a href="#" class="img-link {{ $loop->iteration === 1 || $loop->iteration === 4 ? 'small' : '' }}">
-                    <img src="{{ asset('storage/' . $project->image_path) }}" alt="{{ $project->title }}" class="img-fluid">
-                  </a>
-                @endif
-
-                <h3><a href="#">{{ $project->title }}</a></h3>
-                @if($project->description)
-                  <span>{!! nl2br(e($project->description)) !!}</span>
-                @endif
-              </div>
-            </div>
-          @endforeach
-        </div>
-
-      </div>
-    </div>
-  @endif
-
-
-  {{-- ✅ QUOTES / TESTIMONIALS --}}
-  @if(($sectionActive['home-testimonials'] ?? false) && $quotes->count())
-    <div class="site-section section-4" id="testimonials-section" data-editable>
-      @if($isAdmin)
-        <div class="edit-controls">
-          <a href="{{ url('/admin/quotes') }}" target="_blank">💬 Отзывы</a>
-        </div>
-      @endif
-
-      <div class="container">
-        <div class="row justify-content-center text-center">
-          <div class="col-md-7">
-            <div class="slide-one-item owl-carousel">
-              @foreach($quotes as $quote)
-                <blockquote class="testimonial-1" data-editable>
-                  @if($isAdmin)
-                    <div class="edit-controls">
-                      <a href="{{ url('/admin/quotes/'.$quote->id.'/edit') }}" target="_blank">✏️ Отзыв</a>
+                    {{-- ❗ СТАТИЧЕСКИЙ СЛОЙ --}}
+                    <div
+                        class="tp-caption h5 normal-weight caption lfl whitefont"
+                        data-easing="easeOutBack"
+                        data-speed="1000"
+                        data-start="500"
+                        data-y="center"
+                        data-x="left"
+                        data-hoffset="100"
+                        data-voffset="68">
+                        адаптивный дизайн
                     </div>
-                  @endif
 
-                  <span class="quote quote-icon-wrap">
-                    <span class="icon-format_quote"></span>
-                  </span>
+                </li>
+            @endforeach
 
-                  <p>{!! nl2br(e($quote->text)) !!}</p>
-
-                  <cite>
-                    <span class="text-black">{{ $quote->author }}</span>
-                    &mdash;
-                    <span class="text-muted">{{ $quote->role }}</span>
-                  </cite>
-                </blockquote>
-              @endforeach
-            </div>
-          </div>
-        </div>
-      </div>
+        </ul>
+        <div class="tp-bannertimer"></div>
     </div>
-  @endif
-
-
-  {{-- ✅ BLOG --}}
-  @php
-    $blogTitle = $blogIntro['title'] ?? '';
-    $blogText  = $blogIntro['text'] ?? '';
-  @endphp
-
-  @if(($sectionActive['home-blog'] ?? false))
-    <div class="site-section" id="blog-section" data-editable>
-      @if($isAdmin)
-        <div class="edit-controls">
-          <a href="{{ url('/admin/content-blocks?section=home.blog_intro&locale='.$locale) }}" target="_blank">✏️ Blog intro</a>
-          <a href="{{ url('/admin/blog-cards') }}" target="_blank">📰 Blog cards</a>
-        </div>
-      @endif
-
-      <div class="container">
-        <div class="row mb-5">
-          <div class="col-md-7">
-            @if($blogTitle) <h2 class="heading-39291">{!! $blogTitle !!}</h2> @endif
-            @if($blogText) {!! $blogText !!} @endif
-          </div>
-        </div>
-
-        <div class="row align-items-stretch">
-          @foreach($blogCards as $post)
-            <div class="col-lg-3 col-md-6 mb-5">
-              <div class="post-entry-1 h-100" data-editable>
-                @if($isAdmin)
-                  <div class="edit-controls">
-                    <a href="{{ url('/admin/blog-cards/'.$post->id.'/edit') }}" target="_blank">✏️ Пост</a>
-                  </div>
-                @endif
-
-                <div class="post-entry-1-contents">
-                  @if($post->date)
-                    <span class="meta">{{ $post->date->format('F d, Y') }}</span>
-                  @endif
-
-                  <h2><a href="{{ $post->url ?: '#' }}">{{ $post->title }}</a></h2>
-
-                  @if($post->url)
-                    <p class="my-3">
-                      <a href="{{ $post->url }}" class="more-39291">
-                        {!! $blogIntro['read_more_label'] ?? 'Read More' !!}
-                      </a>
-                    </p>
-                  @endif
-                </div>
-
-              </div>
-            </div>
-          @endforeach
-        </div>
-      </div>
-    </div>
-  @endif
-
-
-  {{-- ✅ FOOTER --}}
-  @if(($sectionActive['layout-footer'] ?? true))
-    <footer class="site-footer" id="contact-section" data-editable>
-      @if($isAdmin)
-        <div class="edit-controls">
-          <a href="{{ url('/admin/content-blocks?section=layout.footer&locale='.$locale) }}" target="_blank">✏️ Footer (тексты)</a>
-        </div>
-      @endif
-
-      <div class="container">
-        <div class="row">
-
-          <div class="col-md-6">
-            <div class="row">
-              <div class="col-md-7">
-                <h2 class="footer-heading mb-4">{!! $footerBlocks['about_title'] ?? 'About Us' !!}</h2>
-                <p>{!! $footerBlocks['about_text'] ?? '...' !!}</p>
-              </div>
-
-              <div class="col-md-4 ml-auto">
-                <h2 class="footer-heading mb-4">{!! $footerBlocks['features_title'] ?? 'Features' !!}</h2>
-                <ul class="list-unstyled">
-                  <li><a href="#about-section">{!! $footerBlocks['features_link_about'] ?? 'About Us' !!}</a></li>
-                  <li><a href="#testimonials-section">{!! $footerBlocks['features_link_testimonials'] ?? 'Testimonials' !!}</a></li>
-                  <li><span>{!! $footerBlocks['features_link_terms'] ?? 'Terms of Service' !!}</span></li>
-                  <li><span>{!! $footerBlocks['features_link_privacy'] ?? 'Privacy' !!}</span></li>
-                  <li><a href="#contact-section">{!! $footerBlocks['features_link_contact'] ?? 'Contact Us' !!}</a></li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-md-4 ml-auto">
-            <div class="mb-5">
-              <h2 class="footer-heading mb-4">{!! $footerBlocks['newsletter_title'] ?? 'Subscribe to Newsletter' !!}</h2>
-
-              <form action="#" method="post" class="footer-suscribe-form">
-                <div class="input-group mb-3">
-                  <input type="text" class="form-control rounded-0 border-secondary text-white bg-transparent"
-                         placeholder="{!! $footerBlocks['newsletter_placeholder'] ?? 'Enter Email' !!}">
-                  <div class="input-group-append">
-                    <button class="btn btn-primary text-white" type="button">
-                      {!! $footerBlocks['newsletter_button'] ?? 'Subscribe' !!}
-                    </button>
-                  </div>
-                </div>
-
-                <h2 class="footer-heading mb-4">{!! $footerBlocks['follow_us_title'] ?? 'Follow Us' !!}</h2>
-
-                <a href="{{ $footerBlocks['social_facebook_url'] ?? '#' }}" class="smoothscroll pl-0 pr-3"><span class="icon-facebook"></span></a>
-                <a href="{{ $footerBlocks['social_twitter_url'] ?? '#' }}" class="pl-3 pr-3"><span class="icon-twitter"></span></a>
-                <a href="{{ $footerBlocks['social_instagram_url'] ?? '#' }}" class="pl-3 pr-3"><span class="icon-instagram"></span></a>
-                <a href="{{ $footerBlocks['social_linkedin_url'] ?? '#' }}" class="pl-3 pr-3"><span class="icon-linkedin"></span></a>
-              </form>
-            </div>
-          </div>
-
-        </div>
-
-        <div class="row pt-5 mt-5 text-center">
-          <div class="col-md-12">
-            <div class="pt-5">
-              <p class="small">
-                {!! $footerBlocks['copyright_text']
-                  ?? 'Copyright &copy;<script>document.write(new Date().getFullYear());</script> All rights reserved' !!}
-              </p>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </footer>
-  @endif
-
-</div>
-
-<script src="{{ asset('marga/js') }}/jquery-3.3.1.min.js"></script>
-<script src="{{ asset('marga/js') }}/popper.min.js"></script>
-<script src="{{ asset('marga/js') }}/bootstrap.min.js"></script>
-<script src="{{ asset('marga/js') }}/owl.carousel.min.js"></script>
-<script src="{{ asset('marga/js') }}/jquery.sticky.js"></script>
-<script src="{{ asset('marga/js') }}/jquery.waypoints.min.js"></script>
-<script src="{{ asset('marga/js') }}/jquery.animateNumber.min.js"></script>
-<script src="{{ asset('marga/js') }}/jquery.fancybox.min.js"></script>
-<script src="{{ asset('marga/js') }}/jquery.easing.1.3.js"></script>
-<script src="{{ asset('marga/js') }}/aos.js"></script>
-<script src="{{ asset('marga/js') }}/main.js"></script>
-
-@if($isAdmin)
-<script>
-  (function () {
-    const key = 'front_edit_mode';
-    let editMode = localStorage.getItem(key) === '1';
-
-    const apply = () => document.body.classList.toggle('edit-mode', editMode);
-    apply();
-
-    const btn = document.getElementById('edit-mode-toggle');
-    if (!btn) return;
-
-    btn.addEventListener('click', () => {
-      editMode = !editMode;
-      localStorage.setItem(key, editMode ? '1' : '0');
-      apply();
-    });
-  })();
-</script>
+</section>
 @endif
 
-</body>
-</html>
+            <!-- ========= END ========= -->
+            
+			<!-- ========= FULL WIDTH BOXES ========= -->
+@if(($sectionActive['home-cards'] ?? false) && $homeCards->count())
+<section class="section">
+    <div class="container-fluid">
+        <div class="marketing-box">
+
+            @foreach($homeCards as $card)
+                <div class="product">
+
+                    {{-- КАРТИНКА --}}
+                    @if(!empty($card->image_path))
+                        <img
+                            alt="{{ $card->title }}"
+                            src="{{ asset('storage/'.$card->image_path) }}">
+                    @endif
+
+                    {{-- HOVER --}}
+                    <div class="hover-mark">
+                        <h2>{{ $card->title }}</h2>
+
+                        @if(!empty($card->description))
+                            <p>{{ $card->description }}</p>
+                        @endif
+                    </div>
+
+                </div>
+            @endforeach
+
+        </div>
+    </div>
+</section>
+@endif
+
+
+            <!-- ========= END ========= -->
+            
+            <!-- ========= TITLE ======== -->
+            <section class="section-bar-white">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="title-section">
+                                <h1>СПЕЦИАЛЬНЫЕ ПРЕДЛОЖЕНИЯ</h1>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- ========= END======== -->
+            
+            <!-- ========= CAROUSEL  FEATURES PRODUCTS ========= -->
+           @if(($sectionActive['spec-list'] ?? false) && $specList->count())
+<section class="promo-section">
+    <div class="container">
+
+        <div class="promo-slider">
+
+            @foreach($specList as $promo)
+                <div class="promo-slide">
+
+                    <div class="promo-content">
+                        <h3 class="promo-title">
+                            {{ $promo->title }}
+                        </h3>
+
+                        @if($promo->description)
+                            <p class="promo-text">{{ $promo->description }}</p>
+                        @endif
+
+                        @if($promo->description_2)
+                            <p class="promo-text muted">{{ $promo->description_2 }}</p>
+                        @endif
+
+                        @if($promo->link)
+                            <a href="{{ $promo->link }}" class="promo-btn">
+                                Узнать детали →
+                            </a>
+                        @endif
+                    </div>
+
+                    @if($promo->image_path)
+                        <div class="promo-image">
+                            <img src="{{ asset('storage/'.$promo->image_path) }}" alt="">
+                        </div>
+                    @endif
+
+                </div>
+            @endforeach
+
+        </div>
+
+    </div>
+</section>
+@endif
+<style>
+    /* SECTION */
+.promo-section {
+    padding: 80px 0;
+    background: linear-gradient(135deg, #111c31ff, #373169ff, #4f5da5ff);
+    color: #fff;
+    overflow: hidden;
+}
+
+/* SLIDER */
+.promo-slider {
+    display: flex;
+    gap: 60px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 20px;
+}
+
+.promo-slider::-webkit-scrollbar {
+    height: 6px;
+}
+.promo-slider::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.3);
+    border-radius: 10px;
+}
+
+/* SLIDE */
+.promo-slide {
+    min-width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 60px;
+    scroll-snap-align: start;
+    animation: fadeSlide 0.8s ease forwards;
+}
+
+/* CONTENT */
+.promo-content {
+    max-width: 520px;
+}
+
+.promo-title {
+    font-size: 38px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+}
+
+.promo-text {
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.promo-text.muted {
+    opacity: 0.8;
+}
+
+/* BUTTON */
+.promo-btn {
+    display: inline-block;
+    margin-top: 25px;
+    padding: 14px 34px;
+    border-radius: 40px;
+    background: #363863;
+    background: linear-gradient(135deg, #7072a2ff, #d4d5deff);
+    color: #ffffffff;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all .35s ease;
+}
+
+.promo-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(0,0,0,.35);
+}
+
+/* IMAGE */
+.promo-image img {
+    max-width: 420px;
+    border-radius: 24px;
+    box-shadow: 0 30px 60px rgba(0,0,0,.4);
+    transform: translateY(0);
+    transition: transform .6s ease;
+}
+
+.promo-slide:hover .promo-image img {
+    transform: translateY(-10px);
+}
+
+/* ANIMATION */
+@keyframes fadeSlide {
+    from {
+        opacity: 0;
+        transform: translateX(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ADAPTIVE */
+@media (max-width: 992px) {
+    .promo-slide {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .promo-image img {
+        max-width: 90%;
+    }
+}
+
+    </style>
+            <!-- ========= END ========= -->
+            
+            <!-- ========= TITLE ======== -->
+            <section class="section-bar-white">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="title-section">
+                                <h1>Лучшие предложения</h1>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- ========= END======== -->
+            
+            <!-- ========= SHOP ========= -->
+           @if(($sectionActive['catalog'] ?? false) && isset($catalogProducts) && $catalogProducts->count())
+<section class="section">
+    <div class="container">
+        <div class="lowerpad row">
+
+            @foreach($catalogProducts as $item)
+                @php
+                    // announce image
+                    $announceImage = $item->announce_image_path
+                        ? \Illuminate\Support\Facades\Storage::url($item->announce_image_path)
+                        : null;
+
+                    // modal id (unique)
+                    $modalId = 'productModal-' . $item->id;
+
+                    // price logic
+                    $hasSale = !empty($item->sale_price) && (float)$item->sale_price > 0;
+                    $priceText = $hasSale ? $item->sale_price : $item->price;
+
+                    // images for modal (detail images)
+                    // предполагается связь $item->images (hasMany)
+                    $detailImages = $item->relationLoaded('images') ? $item->images : ($item->images ?? collect());
+
+                    // fallback если нет detail images — покажем announce
+                    $gallery = ($detailImages && $detailImages->count())
+                        ? $detailImages
+                        : collect();
+
+                    // для первого фото в галерее (если вдруг нужно)
+                    $firstGalleryUrl = null;
+                    if ($gallery->count()) {
+                        $firstGalleryUrl = \Illuminate\Support\Facades\Storage::url($gallery->first()->image_path);
+                    }
+                @endphp
+
+                {{-- CARD --}}
+                <div class="col-lg-3 col-sm-6 col-xs-12">
+                    <div class="isotope-info">
+                        @if($announceImage)
+                            <img class="img-responsive" src="{{ $announceImage }}" alt=""/>
+                        @else
+                            <div style="width:100%;height:240px;background:#222;border-radius:6px;"></div>
+                        @endif
+
+                        <div class="hover-info">
+                            <a data-toggle="modal" data-target="#{{ $modalId }}"
+                               class="qv-button button-1 button-round button-small">
+                                <i class="fa fa-eye"></i>
+                            </a>
+
+                            {{-- пока без логики корзины --}}
+                          <a href="#"
+   class="fg-button button-3 button-round button-small js-add-to-cart"
+   data-id="{{ $item->id }}">
+   В КОРЗИНУ
+</a>
+
+
+                        </div>
+                    </div>
+
+                    <div class="shop-item-label">
+                        <h5>{{ $item->announce_title ?: $item->title }}</h5>
+
+                        <div class="pull-left">
+                            @if($hasSale)
+                                <del class="reduction">{{ number_format((float)$item->price, 2, '.', ' ') }}</del>
+                                <span>{{ number_format((float)$item->sale_price, 2, '.', ' ') }}</span>
+                            @else
+                                <span>{{ number_format((float)$item->price, 2, '.', ' ') }}</span>
+                            @endif
+                        </div>
+
+                        <div class="rating pull-right">
+                            {{-- статический рейтинг --}}
+                            <i class="fa fa-star"></i>
+                            <i class="fa fa-star"></i>
+                            <i class="fa fa-star"></i>
+                            <i class="fa fa-star"></i>
+                            <i class="fa fa-star"></i>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- MODAL (внутри этого же blade) --}}
+                <div class="modal fade" id="{{ $modalId }}" tabindex="-1" role="dialog" aria-labelledby="{{ $modalId }}Label">
+                    <div class="modal-dialog modal-lg" id="quickview-modal">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="row lowerpad">
+
+                                            {{-- LEFT: GALLERY --}}
+                                            <div class="col-lg-5 col-sm-5 col-xs-12">
+                                                <div class="sp-wrap">
+
+                                                    {{-- 1) если есть детальные картинки --}}
+                                                    @if($gallery->count())
+                                                        @foreach($gallery as $img)
+                                                            @php
+                                                                $imgUrl = \Illuminate\Support\Facades\Storage::url($img->image_path);
+                                                            @endphp
+                                                            <a href="{{ $imgUrl }}">
+                                                                <img src="{{ $imgUrl }}" alt="">
+                                                            </a>
+                                                        @endforeach
+
+                                                    {{-- 2) иначе — хотя бы announce --}}
+                                                    @elseif($announceImage)
+                                                        <a href="{{ $announceImage }}">
+                                                            <img src="{{ $announceImage }}" alt="">
+                                                        </a>
+
+                                                    {{-- 3) иначе заглушка --}}
+                                                    @else
+                                                        <div style="width:100%;height:320px;background:#222;border-radius:6px;"></div>
+                                                    @endif
+
+                                                </div>
+                                            </div>
+
+                                            {{-- RIGHT: INFO --}}
+                                            <div class="col-lg-7 col-sm-7 col-xs-12">
+                                                <div class="shop-item-label big">
+
+                                                    {{-- Название (детальный заголовок) --}}
+                                                    <h5>{{ $item->title }}</h5>
+
+                                                    {{-- Цена --}}
+                                                    @if($hasSale)
+                                                        <span>
+                                                            <del class="reduction">{{ number_format((float)$item->price, 2, '.', ' ') }}</del>
+                                                            {{ number_format((float)$item->sale_price, 2, '.', ' ') }}
+                                                        </span>
+                                                    @else
+                                                        <span>{{ number_format((float)$item->price, 2, '.', ' ') }}</span>
+                                                    @endif
+
+                                                    {{-- Rating (пока статический) --}}
+                                                    <div class="rating">
+                                                        <i class="fa fa-star"></i>
+                                                        <i class="fa fa-star"></i>
+                                                        <i class="fa fa-star"></i>
+                                                        <i class="fa fa-star"></i>
+                                                        <i class="fa fa-star-o"></i>
+                                                        <p>(понравилось 3 людям)</p>
+                                                    </div>
+
+                                                    {{-- Список преимуществ (пока статический как в шаблоне) --}}
+                                                   
+
+                                                    {{-- Детальное описание --}}
+                                                    <div>
+                                                        @if(!empty($item->description))
+                                                            <p>{{ $item->description }}</p>
+                                                        @elseif(!empty($item->announce_description))
+                                                            <p>{{ $item->announce_description }}</p>
+                                                        @else
+                                                            <p></p>
+                                                        @endif
+                                                    </div>
+
+                                                    {{-- Доп. детальное описание --}}
+                                                    @if(!empty($item->description_extra))
+                                                        <div style="margin-top:10px;">
+                                                            <p>{{ $item->description_extra }}</p>
+                                                        </div>
+                                                    @endif
+
+                                                    {{-- Кол-во + В корзину (как в шаблоне) --}}
+                                                    <div>
+                                                        <form class="ammount js-qty-form">
+  <button type="button" class="js-qty-minus">-</button>
+
+  <input
+    id="qty-{{ $item->id }}"
+    type="text"
+    class="js-qty-input"
+    value="1"
+  />
+
+  <button type="button" class="js-qty-plus">+</button>
+
+  <button
+    type="button"
+    class="button-2 button-xsmall js-add-to-cart"
+    data-id="{{ $item->id }}"
+    data-qty-input="#qty-{{ $item->id }}"
+  >
+    В КОРЗИНУ
+  </button>
+</form>
+
+                                                    </div>
+
+                                                </div>
+                                            </div>
+                                            {{-- /RIGHT --}}
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{-- /modal-body --}}
+                        </div>
+                    </div>
+                </div>
+                {{-- /MODAL --}}
+
+            @endforeach
+
+        </div>
+    </div>
+</section>
+@endif
+
+
+            <!-- ======= END ========= -->
+			
+			<!-- ========= PARALLAX ======== -->
+           @if(($sectionActive['counter'] ?? false) && isset($counterCards) && $counterCards->count())
+    @php
+        // Если у Card нет поля под иконку — сделаем маппинг по позиции
+        $icons = [
+            1 => 'icon-basket',
+            2 => 'icon-alarmclock',
+            3 => 'icon-heart',
+            4 => 'icon-mobile',
+        ];
+    @endphp
+
+    <section class="parallax"
+             style="background: transparent url('{{ asset('tiband/img/banners/3.jpg') }}') no-repeat fixed 50% 50px / cover ;">
+        <div class="container">
+            <div class="row">
+
+                @foreach($counterCards->take(4) as $card)
+                    @php
+                        $icon = $icons[$card->position] ?? 'icon-basket';
+                        // В твоём примере число лежит в description
+                        $number = trim((string)($card->description ?? '0'));
+                        $label  = trim((string)($card->title ?? ''));
+                    @endphp
+
+                    <div class="col-lg-3 col-sm-3 col-xs-12">
+                        <div class="counter-3 number-container my-animation animated" data-perc="{{ $number }}">
+                            <i class="counter-icon {{ $icon }}"></i>
+                            <div class="number">{{ $number }}</div>
+                            <h6>{{ $label }}</h6>
+                        </div>
+                    </div>
+                @endforeach
+
+            </div>
+        </div>
+    </section>
+@endif
+
+            <!-- ========= END ========= -->
+			
+			<!-- ========= TITLE ======== -->
+            <section class="section-bar-white">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="title-section">
+                                <h1>НАШИ НОВОСТИ</h1>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- ========= END======== -->
+            <!-- ========= SLIDER ========= -->
+@if(($sectionActive['news'] ?? false) && isset($news) && $news->count())
+<section class="section">
+    <div class="container-fluid">
+        <div class="nopad owl-carousel portfolio-carousel">
+
+            @foreach($news as $item)
+                <a class="clearhover" href="{{ $item->link ?: '#' }}">
+                    <div class="isotope-info">
+
+                        {{-- картинка (если нет — покажем пустой блок, чтобы верстка не ломалась) --}}
+                        @if(!empty($item->image_path))
+                            <img class="img-responsive" src="{{ asset('storage/'.$item->image_path) }}" alt="{{ $item->title ?? '' }}">
+                        @else
+                            <div style="height:260px;background:#222;"></div>
+                        @endif
+
+                        <div class="hover-info">
+                            <div class="infobox-3">
+
+                                {{-- День --}}
+                                @if(!empty($item->description))
+                                    <h4>{{ $item->description }}</h4>
+                                @endif
+
+                                <hr/>
+
+                                {{-- Месяц --}}
+                                @if(!empty($item->description_2))
+                                    <h5>{{ $item->description_2 }}</h5>
+                                @endif
+
+                                {{-- Заголовок --}}
+                                @if(!empty($item->title))
+                                    <h2>{{ $item->title }}</h2>
+                                @endif
+
+                                {{-- Если хочешь ещё одну строку — subtitle --}}
+                                @if(!empty($item->subtitle))
+                                    <p style="margin-top:10px;">{{ $item->subtitle }}</p>
+                                @endif
+
+                            </div>
+                        </div>
+
+                    </div>
+                </a>
+            @endforeach
+
+        </div>
+    </div>
+</section>
+@endif
+
+            <!-- ========= END ========= -->
+
+            <!-- ========= TITLE ======== -->
+            <section class="section-bar-white">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="title-section">
+                                <h1>ОТЗЫВЫ О КОМПАНИИ</h1>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========= TESTIMONIALS ======== -->
+            @if(($sectionActive['reviews'] ?? false) && isset($reviews) && $reviews->count())
+<section class="section section-margin" style="padding-top:0px !important;" show-overflow>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+
+                <div class="owl-carousel testimonials">
+
+                    @foreach($reviews as $item)
+                        <div class="infobox full-width center">
+
+                            {{-- Заголовок --}}
+                            @if(!empty($item->title))
+                                <h3>{{ $item->title }}</h3>
+                            @endif
+
+                            {{-- Описание --}}
+                            @if(!empty($item->description))
+                                <span>{{ $item->description }}</span>
+                            @endif
+
+                            {{-- Автор (subtitle) + должность/доп. (description_2) --}}
+                            @php
+                                $authorLine = trim(collect([$item->subtitle, $item->description_2])->filter()->join(', '));
+                            @endphp
+
+                            @if(!empty($authorLine))
+                                @if(!empty($item->link))
+                                    <a href="{{ $item->link }}"><h6>{{ $authorLine }}</h6></a>
+                                @else
+                                    <h6>{{ $authorLine }}</h6>
+                                @endif
+                            @endif
+
+                        </div>
+                    @endforeach
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+@endif
+
+            <!-- ========= END ========= -->
+            
+            <!-- subscribe-section 
+            ================================================== -->
+            <section id="subscribe-section">
+                <div class="container">
+                    <div class="subscribe-box">
+                        <h2>НЕ ПРОПУСТИТЕ СКИДКИ И АКЦИИ! ПОДПИШИТЕСЬ!</h2>
+                        <form class="subscribe-form">
+                            <input type="text" name="subscribe" id="subscribe" placeholder="ВАША ПОЧТА"/>
+                            <a class="button-1 button-small" href="#">ОФОРМИТЬ</a>
+                        </form>
+                    </div>
+                </div>
+            </section>
+            <!-- End subscribe section -->
+@endsection
+       
+            

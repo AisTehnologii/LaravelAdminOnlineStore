@@ -13,6 +13,7 @@ class AuthServiceProvider extends ServiceProvider
         \App\Models\Conversation::class => \App\Policies\ConversationPolicy::class,
         \App\Models\Task::class => \App\Policies\TaskPolicy::class,
     \App\Models\TaskComment::class => \App\Policies\TaskCommentPolicy::class,
+    \App\Models\Product::class => \App\Policies\ProductPolicy::class,
     ];
    
 
