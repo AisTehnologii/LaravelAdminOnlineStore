@@ -14,6 +14,7 @@ class AuthServiceProvider extends ServiceProvider
         \App\Models\Task::class => \App\Policies\TaskPolicy::class,
     \App\Models\TaskComment::class => \App\Policies\TaskCommentPolicy::class,
     \App\Models\Product::class => \App\Policies\ProductPolicy::class,
+    \App\Models\Coupon::class => \App\Policies\CouponPolicy::class,
     ];
    
 

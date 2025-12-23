@@ -15,6 +15,12 @@ class CouponResource extends Resource
     protected static ?string $model = Coupon::class;
     protected static ?string $navigationIcon = 'heroicon-o-ticket';
 
+     // ✅ Группа в меню
+    protected static ?string $navigationGroup = 'Shop';
+
+    // (опционально) как будет называться пункт
+    protected static ?string $navigationLabel = 'Coupons';
+
     public static function form(Form $form): Form
     {
         return $form->schema([

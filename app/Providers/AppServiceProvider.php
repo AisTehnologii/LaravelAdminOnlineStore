@@ -27,5 +27,8 @@ class AppServiceProvider extends ServiceProvider
         $view->with('activeCoupon', session('coupon')); // ['code'=>..., 'percent'=>...]
     });
   
+    if (app()->environment('local')) {
+        URL::forceScheme('https');
+    }
     }
 }
