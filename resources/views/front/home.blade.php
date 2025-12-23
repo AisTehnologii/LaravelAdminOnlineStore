@@ -311,24 +311,27 @@
                     // modal id (unique)
                     $modalId = 'productModal-' . $item->id;
 
-                    // price logic
+                    // базовая логика цены (как у тебя)
                     $hasSale = !empty($item->sale_price) && (float)$item->sale_price > 0;
-                    $priceText = $hasSale ? $item->sale_price : $item->price;
+
+                    // "базовая цена к оплате" без купона: если есть скидка sale_price — берём её, иначе price
+                    $base = $hasSale ? (float)$item->sale_price : (float)$item->price;
+
+                    // "старая цена" (для зачёркивания) — если есть sale_price
+                    $old = $hasSale ? (float)$item->price : null;
+
+                    // купон
+                    $couponPercent = (int) (session('coupon.percent') ?? 0);
+                    $couponCode = (string) (session('coupon.code') ?? '');
+
+                    $final = $couponPercent > 0 ? round($base * (100 - $couponPercent) / 100, 2) : $base;
 
                     // images for modal (detail images)
-                    // предполагается связь $item->images (hasMany)
                     $detailImages = $item->relationLoaded('images') ? $item->images : ($item->images ?? collect());
 
-                    // fallback если нет detail images — покажем announce
                     $gallery = ($detailImages && $detailImages->count())
                         ? $detailImages
                         : collect();
-
-                    // для первого фото в галерее (если вдруг нужно)
-                    $firstGalleryUrl = null;
-                    if ($gallery->count()) {
-                        $firstGalleryUrl = \Illuminate\Support\Facades\Storage::url($gallery->first()->image_path);
-                    }
                 @endphp
 
                 {{-- CARD --}}
@@ -346,14 +349,11 @@
                                 <i class="fa fa-eye"></i>
                             </a>
 
-                            {{-- пока без логики корзины --}}
-                          <a href="#"
-   class="fg-button button-3 button-round button-small js-add-to-cart"
-   data-id="{{ $item->id }}">
-   В КОРЗИНУ
-</a>
-
-
+                            <a href="#"
+                               class="fg-button button-3 button-round button-small js-add-to-cart"
+                               data-id="{{ $item->id }}">
+                                В КОРЗИНУ
+                            </a>
                         </div>
                     </div>
 
@@ -361,26 +361,35 @@
                         <h5>{{ $item->announce_title ?: $item->title }}</h5>
 
                         <div class="pull-left">
-                            @if($hasSale)
-                                <del class="reduction">{{ number_format((float)$item->price, 2, '.', ' ') }}</del>
-                                <span>{{ number_format((float)$item->sale_price, 2, '.', ' ') }}</span>
+                            {{-- если есть sale_price — показываем старую цену --}}
+                            @if($old)
+                                <del class="reduction">{{ number_format($old, 2, '.', ' ') }}</del>
+                            @endif
+
+                            {{-- если есть купон — показываем base зачёркнутой и final рядом --}}
+                            @if($couponPercent > 0)
+                                <del class="reduction" style="margin-left:6px;">
+                                    {{ number_format($base, 2, '.', ' ') }}
+                                </del>
+                                <span style="margin-left:6px;">
+                                    {{ number_format($final, 2, '.', ' ') }}
+                                </span>
+                                <span style="display:inline-block;margin-left:6px;font-size:10px;
+                                    padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.06);">
+                                    -{{ $couponPercent }}%
+                                </span>
                             @else
-                                <span>{{ number_format((float)$item->price, 2, '.', ' ') }}</span>
+                                <span>{{ number_format($base, 2, '.', ' ') }}</span>
                             @endif
                         </div>
 
                         <div class="rating pull-right">
-                            {{-- статический рейтинг --}}
-                            <i class="fa fa-star"></i>
-                            <i class="fa fa-star"></i>
-                            <i class="fa fa-star"></i>
-                            <i class="fa fa-star"></i>
-                            <i class="fa fa-star"></i>
+                            <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i>
                         </div>
                     </div>
                 </div>
 
-                {{-- MODAL (внутри этого же blade) --}}
+                {{-- MODAL --}}
                 <div class="modal fade" id="{{ $modalId }}" tabindex="-1" role="dialog" aria-labelledby="{{ $modalId }}Label">
                     <div class="modal-dialog modal-lg" id="quickview-modal">
                         <div class="modal-content">
@@ -399,24 +408,17 @@
                                             <div class="col-lg-5 col-sm-5 col-xs-12">
                                                 <div class="sp-wrap">
 
-                                                    {{-- 1) если есть детальные картинки --}}
                                                     @if($gallery->count())
                                                         @foreach($gallery as $img)
-                                                            @php
-                                                                $imgUrl = \Illuminate\Support\Facades\Storage::url($img->image_path);
-                                                            @endphp
+                                                            @php $imgUrl = \Illuminate\Support\Facades\Storage::url($img->image_path); @endphp
                                                             <a href="{{ $imgUrl }}">
                                                                 <img src="{{ $imgUrl }}" alt="">
                                                             </a>
                                                         @endforeach
-
-                                                    {{-- 2) иначе — хотя бы announce --}}
                                                     @elseif($announceImage)
                                                         <a href="{{ $announceImage }}">
                                                             <img src="{{ $announceImage }}" alt="">
                                                         </a>
-
-                                                    {{-- 3) иначе заглушка --}}
                                                     @else
                                                         <div style="width:100%;height:320px;background:#222;border-radius:6px;"></div>
                                                     @endif
@@ -428,74 +430,73 @@
                                             <div class="col-lg-7 col-sm-7 col-xs-12">
                                                 <div class="shop-item-label big">
 
-                                                    {{-- Название (детальный заголовок) --}}
+                                                    {{-- Детальный заголовок --}}
                                                     <h5>{{ $item->title }}</h5>
 
-                                                    {{-- Цена --}}
-                                                    @if($hasSale)
-                                                        <span>
-                                                            <del class="reduction">{{ number_format((float)$item->price, 2, '.', ' ') }}</del>
-                                                            {{ number_format((float)$item->sale_price, 2, '.', ' ') }}
-                                                        </span>
-                                                    @else
-                                                        <span>{{ number_format((float)$item->price, 2, '.', ' ') }}</span>
-                                                    @endif
+                                                    {{-- Цена в модалке --}}
+                                                    <span>
+                                                        @if($old)
+                                                            <del class="reduction">{{ number_format($old, 2, '.', ' ') }}</del>
+                                                        @endif
 
-                                                    {{-- Rating (пока статический) --}}
+                                                        @if($couponPercent > 0)
+                                                            <del class="reduction" style="margin-left:6px;">
+                                                                {{ number_format($base, 2, '.', ' ') }}
+                                                            </del>
+                                                            <strong style="margin-left:8px;">
+                                                                {{ number_format($final, 2, '.', ' ') }}
+                                                            </strong>
+                                                            <span style="display:inline-block;margin-left:8px;font-size:11px;
+                                                                padding:2px 10px;border-radius:999px;background:rgba(0,0,0,.06);">
+                                                                купон -{{ $couponPercent }}%
+                                                            </span>
+                                                        @else
+                                                            <strong style="margin-left:6px;">
+                                                                {{ number_format($base, 2, '.', ' ') }}
+                                                            </strong>
+                                                        @endif
+                                                    </span>
+
                                                     <div class="rating">
-                                                        <i class="fa fa-star"></i>
-                                                        <i class="fa fa-star"></i>
-                                                        <i class="fa fa-star"></i>
-                                                        <i class="fa fa-star"></i>
-                                                        <i class="fa fa-star-o"></i>
+                                                        <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star-o"></i>
                                                         <p>(понравилось 3 людям)</p>
                                                     </div>
 
-                                                    {{-- Список преимуществ (пока статический как в шаблоне) --}}
-                                                   
-
-                                                    {{-- Детальное описание --}}
+                                                    {{-- Описание (как ты хотела: обычное + детальное) --}}
                                                     <div>
+                                                        @if(!empty($item->announce_description))
+                                                            <p style="opacity:.85;">{{ $item->announce_description }}</p>
+                                                        @endif
+
                                                         @if(!empty($item->description))
                                                             <p>{{ $item->description }}</p>
-                                                        @elseif(!empty($item->announce_description))
-                                                            <p>{{ $item->announce_description }}</p>
-                                                        @else
-                                                            <p></p>
+                                                        @endif
+
+                                                        @if(!empty($item->description_extra))
+                                                            <div style="margin-top:10px;">
+                                                                <p>{{ $item->description_extra }}</p>
+                                                            </div>
                                                         @endif
                                                     </div>
 
-                                                    {{-- Доп. детальное описание --}}
-                                                    @if(!empty($item->description_extra))
-                                                        <div style="margin-top:10px;">
-                                                            <p>{{ $item->description_extra }}</p>
-                                                        </div>
-                                                    @endif
-
-                                                    {{-- Кол-во + В корзину (как в шаблоне) --}}
+                                                    {{-- Кол-во + В корзину (НЕ ТРОГАЮ твою логику) --}}
                                                     <div>
                                                         <form class="ammount js-qty-form">
-  <button type="button" class="js-qty-minus">-</button>
+                                                            <button type="button" class="js-qty-minus">-</button>
 
-  <input
-    id="qty-{{ $item->id }}"
-    type="text"
-    class="js-qty-input"
-    value="1"
-  />
+                                                            <input id="qty-{{ $item->id }}" type="text" class="js-qty-input" value="1"/>
 
-  <button type="button" class="js-qty-plus">+</button>
+                                                            <button type="button" class="js-qty-plus">+</button>
 
-  <button
-    type="button"
-    class="button-2 button-xsmall js-add-to-cart"
-    data-id="{{ $item->id }}"
-    data-qty-input="#qty-{{ $item->id }}"
-  >
-    В КОРЗИНУ
-  </button>
-</form>
-
+                                                            <button
+                                                                type="button"
+                                                                class="button-2 button-xsmall js-add-to-cart"
+                                                                data-id="{{ $item->id }}"
+                                                                data-qty-input="#qty-{{ $item->id }}"
+                                                            >
+                                                                В КОРЗИНУ
+                                                            </button>
+                                                        </form>
                                                     </div>
 
                                                 </div>
@@ -518,6 +519,7 @@
     </div>
 </section>
 @endif
+
 
 
             <!-- ======= END ========= -->
@@ -577,17 +579,24 @@
                 </div>
             </section>
             <!-- ========= END======== -->
-            <!-- ========= SLIDER ========= -->
+ <!-- ========= SLIDER ========= -->
 @if(($sectionActive['news'] ?? false) && isset($news) && $news->count())
 <section class="section">
     <div class="container-fluid">
         <div class="nopad owl-carousel portfolio-carousel">
 
             @foreach($news as $item)
-                <a class="clearhover" href="{{ $item->link ?: '#' }}">
+                @php
+                    // если есть внешняя ссылка — используем её, иначе ведём на страницу новости
+                    $href = !empty($item->link)
+                        ? $item->link
+                        : route('news.show', $item->id);
+                @endphp
+
+                <a class="clearhover" href="{{ $href }}">
                     <div class="isotope-info">
 
-                        {{-- картинка (если нет — покажем пустой блок, чтобы верстка не ломалась) --}}
+                        {{-- картинка --}}
                         @if(!empty($item->image_path))
                             <img class="img-responsive" src="{{ asset('storage/'.$item->image_path) }}" alt="{{ $item->title ?? '' }}">
                         @else
@@ -614,7 +623,7 @@
                                     <h2>{{ $item->title }}</h2>
                                 @endif
 
-                                {{-- Если хочешь ещё одну строку — subtitle --}}
+                                {{-- subtitle --}}
                                 @if(!empty($item->subtitle))
                                     <p style="margin-top:10px;">{{ $item->subtitle }}</p>
                                 @endif
@@ -630,6 +639,7 @@
     </div>
 </section>
 @endif
+
 
             <!-- ========= END ========= -->
 

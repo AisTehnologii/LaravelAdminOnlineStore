@@ -22,6 +22,9 @@ use App\Http\Controllers\BackupDownloadController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
+use App\Models\Coupon;
+use App\Support\Pricing;
+
 
 /**
  * Поддерживаемые языки
@@ -429,6 +432,576 @@ Route::get('/cart/state', function () {
     ]);
 })->name('cart.state');
 
+
+
+
+Route::get('/products', function (Request $request) {
+
+    $locale = app()->getLocale();
+
+    $catalogSectionId = ContentSection::query()
+        ->where('slug', 'catalog')
+        ->where('is_active', true)
+        ->value('id');
+
+    $cart = session('cart', []);
+    $itemsCount = collect($cart)->sum('qty');
+
+    if (!$catalogSectionId) {
+        return view('front.products', [
+            'products' => collect(),
+            'popularProducts' => collect(),
+            'itemsCount' => $itemsCount,
+            'priceMin' => 0,
+            'priceMax' => 0,
+            'appliedMin' => null,
+            'appliedMax' => null,
+            'sort' => 'position',
+            'dir' => 'asc',
+        ]);
+    }
+
+    // База (все товары каталога)
+    $base = Product::query()
+        ->where('locale', $locale)
+        ->where('is_active', true)
+        ->where('section_id', $catalogSectionId)
+        ->with(['images' => fn($q) => $q->orderBy('position')]);
+
+    // ✅ Реальные min/max по базе (по всем товарам каталога)
+    $minDb = (clone $base)->min(DB::raw('COALESCE(NULLIF(sale_price,0), price)')) ?? 0;
+    $maxDb = (clone $base)->max(DB::raw('COALESCE(NULLIF(sale_price,0), price)')) ?? 0;
+
+    // ✅ По умолчанию показываем ВСЕ товары (без фильтра)
+    $q = clone $base;
+
+    // ✅ Фильтр включается ТОЛЬКО если apply=1
+    $apply = $request->query('apply') === '1';
+
+    $appliedMin = null;
+    $appliedMax = null;
+
+    if ($apply) {
+        $min = $request->filled('min') ? (float)$request->query('min') : null;
+        $max = $request->filled('max') ? (float)$request->query('max') : null;
+
+        // защита: если пришли кривые значения — приводим к базе
+        if ($min !== null) $min = max((float)$minDb, $min);
+        if ($max !== null) $max = min((float)$maxDb, $max);
+
+        if ($min !== null) {
+            $q->whereRaw('COALESCE(NULLIF(sale_price,0), price) >= ?', [$min]);
+            $appliedMin = $min;
+        }
+        if ($max !== null) {
+            $q->whereRaw('COALESCE(NULLIF(sale_price,0), price) <= ?', [$max]);
+            $appliedMax = $max;
+        }
+    }
+
+    // Сортировка
+    $sort = $request->query('sort', 'position'); // position | price | newest
+    $dir  = $request->query('dir', 'asc');       // asc | desc
+    $dir  = in_array($dir, ['asc', 'desc']) ? $dir : 'asc';
+
+    if ($sort === 'price') {
+        $q->orderByRaw('COALESCE(NULLIF(sale_price,0), price) ' . $dir);
+    } elseif ($sort === 'newest') {
+        $q->orderBy('id', $dir);
+    } else {
+        $q->orderBy('position', $dir)->orderBy('id', 'desc');
+    }
+
+    $products = $q->paginate(12)->withQueryString();
+
+    // Популярные (без фильтра по цене)
+    $popularProducts = (clone $base)
+        ->orderBy('position', 'asc')
+        ->orderBy('id', 'desc')
+        ->take(6)
+        ->get();
+
+    return view('front.products', [
+        'products' => $products,
+        'popularProducts' => $popularProducts,
+        'itemsCount' => $itemsCount,
+        'priceMin' => (float)$minDb,
+        'priceMax' => (float)$maxDb,
+        'appliedMin' => $appliedMin,
+        'appliedMax' => $appliedMax,
+        'sort' => $sort,
+        'dir' => $dir,
+    ]);
+
+})->name('products.index');
+
+
+Route::get('/news', function (Request $request) {
+
+    $locale = app()->getLocale();
+
+    // корзина для счетчиков в хедере
+    $cart = session('cart', []);
+    $itemsCount = collect($cart)->sum('qty');
+
+    /*
+    |--------------------------------------------------------------------------
+    | section_id для "news"
+    |--------------------------------------------------------------------------
+    */
+    $newsSectionQ = ContentSection::query()->where('slug', 'news');
+
+    if (Schema::hasColumn('content_sections', 'is_active')) {
+        $newsSectionQ->where('is_active', 1);
+    }
+
+    $newsSectionId = $newsSectionQ->value('id');
+
+    // если секция выключена/не найдена
+    if (!$newsSectionId) {
+        return view('front.news.index', [
+            'news' => collect([]),
+            'latestNews' => collect([]),
+            'reviews' => collect([]),
+            'itemsCount' => $itemsCount,
+        ]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | NEWS: базовый запрос как на главной (promo_blocks секции news)
+    |--------------------------------------------------------------------------
+    */
+    $q = PromoBlock::query();
+
+    if (Schema::hasColumn('promo_blocks', 'locale')) {
+        $q->where('locale', $locale);
+    }
+
+    if (Schema::hasColumn('promo_blocks', 'section_id')) {
+        $q->where('section_id', $newsSectionId);
+    }
+
+    if (Schema::hasColumn('promo_blocks', 'is_active')) {
+        $q->where('is_active', 1);
+    }
+
+    if (Schema::hasColumn('promo_blocks', 'position')) {
+        $q->orderBy('position');
+    }
+
+    $q->orderByDesc('id');
+
+    // список
+    $news = (clone $q)->paginate(12)->withQueryString();
+
+    // sidebar "последние"
+    $latestNews = (clone $q)->limit(6)->get();
+
+    /*
+    |--------------------------------------------------------------------------
+    | REVIEWS: для блока "ЛУЧШИЕ ОТЗЫВЫ" (promo_blocks секции reviews)
+    |--------------------------------------------------------------------------
+    */
+    $reviewsSectionQ = ContentSection::query()->where('slug', 'reviews');
+
+    if (Schema::hasColumn('content_sections', 'is_active')) {
+        $reviewsSectionQ->where('is_active', 1);
+    }
+
+    $reviewsSectionId = $reviewsSectionQ->value('id');
+
+    $reviews = collect([]);
+
+    if ($reviewsSectionId) {
+        $rq = PromoBlock::query();
+
+        if (Schema::hasColumn('promo_blocks', 'locale')) {
+            $rq->where('locale', $locale);
+        }
+
+        if (Schema::hasColumn('promo_blocks', 'section_id')) {
+            $rq->where('section_id', $reviewsSectionId);
+        }
+
+        if (Schema::hasColumn('promo_blocks', 'is_active')) {
+            $rq->where('is_active', 1);
+        }
+
+        if (Schema::hasColumn('promo_blocks', 'position')) {
+            $rq->orderBy('position');
+        }
+
+        $rq->orderByDesc('id');
+
+        // в сайдбар обычно 4 хватает
+        $reviews = $rq->limit(4)->get();
+    }
+
+    return view('front.news.index', compact('news', 'latestNews', 'reviews', 'itemsCount'));
+
+})->name('news.index');
+
+
+Route::get('/news/{id}', function ($id) {
+    $locale = app()->getLocale();
+
+    $newsSectionId = ContentSection::query()
+        ->where('slug', 'news')
+        ->where('is_active', true)
+        ->value('id');
+
+    // корзина для счетчиков
+    $cart = session('cart', []);
+    $itemsCount = collect($cart)->sum('qty');
+
+    // одна новость (только из нужной секции и locale)
+    $postQ = PromoBlock::query()
+        ->where('locale', $locale)
+        ->when($newsSectionId, fn($q) => $q->where('section_id', $newsSectionId));
+
+    if (Schema::hasColumn('promo_blocks', 'is_active')) {
+        $postQ->where('is_active', 1);
+    }
+
+    $post = $postQ->findOrFail($id);
+
+    // для сайдбара/похожих
+    $q = PromoBlock::query()
+        ->where('locale', $locale)
+        ->when($newsSectionId, fn($qq) => $qq->where('section_id', $newsSectionId));
+
+    if (Schema::hasColumn('promo_blocks', 'is_active')) {
+        $q->where('is_active', 1);
+    }
+
+    if (Schema::hasColumn('promo_blocks', 'position')) {
+        $q->orderBy('position');
+    }
+    $q->orderByDesc('id');
+
+    $latestNews = (clone $q)->limit(6)->get();
+
+    $relatedNews = (clone $q)
+        ->where('id', '!=', $post->id)
+        ->inRandomOrder()
+        ->limit(3)
+        ->get();
+
+    return view('front.news.show', compact('post', 'latestNews', 'relatedNews', 'itemsCount'));
+})->name('news.show');
+
+
+Route::get('/contacts', function (Request $request) {
+
+    // корзина для счётчиков в хедере
+    $cart = session('cart', []);
+    $itemsCount = collect($cart)->sum('qty');
+
+    return view('front.contacts', compact('itemsCount'));
+})->name('contacts.index');
+
+
+
+Route::get('/search', function (Request $request) {
+    $q = trim((string)$request->get('q', ''));
+    $locale = app()->getLocale();
+
+    // корзина для счетчика в хедере (чтобы не падало, если где-то используется)
+    $cart = session('cart', []);
+    $itemsCount = collect($cart)->sum('qty');
+
+    if ($q === '') {
+        return view('front.search.index', [
+            'q' => $q,
+            'products' => collect([]),
+            'news' => collect([]),
+            'itemsCount' => $itemsCount,
+        ]);
+    }
+
+    // ----------------------------
+    // PRODUCTS (товары)
+    // ----------------------------
+    $productsQuery = Product::query();
+
+    // если есть locale/is_active — учитываем
+    if (Schema::hasColumn('products', 'locale')) {
+        $productsQuery->where('locale', $locale);
+    }
+    if (Schema::hasColumn('products', 'is_active')) {
+        $productsQuery->where('is_active', 1);
+    }
+
+    // поиск по нескольким полям (что есть в проекте)
+    $productsQuery->where(function ($w) use ($q) {
+        $like = '%' . $q . '%';
+        if (Schema::hasColumn('products', 'title')) {
+            $w->orWhere('title', 'like', $like);
+        }
+        if (Schema::hasColumn('products', 'announce_title')) {
+            $w->orWhere('announce_title', 'like', $like);
+        }
+        if (Schema::hasColumn('products', 'announce_description')) {
+            $w->orWhere('announce_description', 'like', $like);
+        }
+        if (Schema::hasColumn('products', 'description')) {
+            $w->orWhere('description', 'like', $like);
+        }
+    });
+
+    if (Schema::hasColumn('products', 'position')) {
+        $productsQuery->orderBy('position');
+    }
+    $productsQuery->orderByDesc('id');
+
+    $products = $productsQuery->limit(20)->get();
+
+    // ----------------------------
+    // NEWS (новости) = promo_blocks секции "news"
+    // ----------------------------
+    $news = collect([]);
+
+    $newsSectionId = ContentSection::query()
+        ->where('slug', 'news')
+        ->where('is_active', true)
+        ->value('id');
+
+    if ($newsSectionId) {
+        $newsQuery = PromoBlock::query()
+            ->where('section_id', $newsSectionId);
+
+        if (Schema::hasColumn('promo_blocks', 'locale')) {
+            $newsQuery->where('locale', $locale);
+        }
+        if (Schema::hasColumn('promo_blocks', 'is_active')) {
+            $newsQuery->where('is_active', 1);
+        }
+
+        $newsQuery->where(function ($w) use ($q) {
+            $like = '%' . $q . '%';
+            if (Schema::hasColumn('promo_blocks', 'title')) {
+                $w->orWhere('title', 'like', $like);
+            }
+            if (Schema::hasColumn('promo_blocks', 'subtitle')) {
+                $w->orWhere('subtitle', 'like', $like);
+            }
+            if (Schema::hasColumn('promo_blocks', 'description')) {
+                $w->orWhere('description', 'like', $like);
+            }
+            if (Schema::hasColumn('promo_blocks', 'description_2')) {
+                $w->orWhere('description_2', 'like', $like);
+            }
+        });
+
+        if (Schema::hasColumn('promo_blocks', 'position')) {
+            $newsQuery->orderBy('position');
+        }
+        $newsQuery->orderByDesc('id');
+
+        $news = $newsQuery->limit(20)->get();
+    }
+
+    return view('front.search.index', compact('q', 'products', 'news', 'itemsCount'));
+})->name('search.index');
+
+
+// JSON подсказки для header (autocomplete)
+Route::get('/search/suggest', function (Request $request) {
+    $q = trim((string)$request->get('q', ''));
+    $locale = app()->getLocale();
+
+    if ($q === '' || mb_strlen($q) < 2) {
+        return response()->json([
+            'ok' => true,
+            'items' => [],
+        ]);
+    }
+
+    $items = [];
+
+    // товары
+    $productsQuery = Product::query();
+
+    if (Schema::hasColumn('products', 'locale')) {
+        $productsQuery->where('locale', $locale);
+    }
+    if (Schema::hasColumn('products', 'is_active')) {
+        $productsQuery->where('is_active', 1);
+    }
+
+    $productsQuery->where(function ($w) use ($q) {
+        $like = '%' . $q . '%';
+        if (Schema::hasColumn('products', 'title')) {
+            $w->orWhere('title', 'like', $like);
+        }
+        if (Schema::hasColumn('products', 'announce_title')) {
+            $w->orWhere('announce_title', 'like', $like);
+        }
+    });
+
+    $products = $productsQuery->orderByDesc('id')->limit(6)->get();
+
+    foreach ($products as $p) {
+        $title = $p->title ?? $p->announce_title ?? ('Product #' . $p->id);
+
+        // ведём на страницу товаров и передаём product=id (у тебя уже можно открыть модалку по параметру)
+        $items[] = [
+            'type' => 'product',
+            'title' => $title,
+            'url' => url('/products') . '?product=' . $p->id,
+        ];
+    }
+
+    // новости
+    $newsSectionId = ContentSection::query()
+        ->where('slug', 'news')
+        ->where('is_active', true)
+        ->value('id');
+
+    if ($newsSectionId) {
+        $newsQuery = PromoBlock::query()
+            ->where('section_id', $newsSectionId);
+
+        if (Schema::hasColumn('promo_blocks', 'locale')) {
+            $newsQuery->where('locale', $locale);
+        }
+        if (Schema::hasColumn('promo_blocks', 'is_active')) {
+            $newsQuery->where('is_active', 1);
+        }
+
+        $newsQuery->where(function ($w) use ($q) {
+            $like = '%' . $q . '%';
+            if (Schema::hasColumn('promo_blocks', 'title')) {
+                $w->orWhere('title', 'like', $like);
+            }
+            if (Schema::hasColumn('promo_blocks', 'subtitle')) {
+                $w->orWhere('subtitle', 'like', $like);
+            }
+        });
+
+        $news = $newsQuery->orderByDesc('id')->limit(6)->get();
+
+        foreach ($news as $n) {
+            $items[] = [
+                'type' => 'news',
+                'title' => $n->title ?? ('News #' . $n->id),
+                'url' => route('news.show', $n->id),
+            ];
+        }
+    }
+
+    return response()->json([
+        'ok' => true,
+        'items' => $items,
+    ]);
+})->name('search.suggest');
+
+
+
+Route::post('/coupon/apply', function (Request $request) {
+    $code = Coupon::normalize((string)$request->input('code', ''));
+
+    if ($code === '') {
+        return response()->json(['ok' => false, 'message' => 'Введите купон.'], 422);
+    }
+
+    $coupon = Coupon::query()->active()->where('code', $code)->first();
+
+    if (!$coupon) {
+        return response()->json(['ok' => false, 'message' => 'Купон недействителен или отключён.'], 404);
+    }
+
+    // сохраняем купон в session
+    session(['coupon' => ['code' => $coupon->code, 'percent' => (int)$coupon->percent]]);
+
+    // пересчитываем корзину "на лету"
+    $cart = session('cart', []);
+    $percent = (int)$coupon->percent;
+
+    foreach ($cart as $pid => $row) {
+        $product = Product::query()->find($pid);
+        if (!$product) continue;
+
+        $base = Pricing::basePrice($product);
+        $effective = Pricing::applyPercent($base, $percent);
+
+        $cart[$pid]['base_price'] = $base;         // сохраняем для справки (не обязательно)
+        $cart[$pid]['unit_price'] = $effective;    // ВАЖНО: тут цена со скидкой
+    }
+
+    session(['cart' => $cart]);
+
+    $sum = collect($cart)->sum(fn($r) => (float)$r['unit_price'] * (int)$r['qty']);
+    $count = collect($cart)->sum(fn($r) => (int)$r['qty']);
+
+    return response()->json([
+        'ok' => true,
+        'message' => "Купон применён: -{$percent}%",
+        'coupon' => session('coupon'),
+        'cart' => $cart,
+        'sum' => round($sum, 2),
+        'count' => $count,
+    ]);
+})->name('coupon.apply');
+
+Route::post('/coupon/clear', function () {
+    session()->forget('coupon');
+
+    // пересчитываем корзину обратно на базовые цены
+    $cart = session('cart', []);
+
+    foreach ($cart as $pid => $row) {
+        $product = Product::query()->find($pid);
+        if (!$product) continue;
+
+        $base = Pricing::basePrice($product);
+        $cart[$pid]['base_price'] = $base;
+        $cart[$pid]['unit_price'] = $base; // без скидки
+    }
+
+    session(['cart' => $cart]);
+
+    $sum = collect($cart)->sum(fn($r) => (float)$r['unit_price'] * (int)$r['qty']);
+    $count = collect($cart)->sum(fn($r) => (int)$r['qty']);
+
+    return response()->json([
+        'ok' => true,
+        'message' => "Купон удалён",
+        'cart' => $cart,
+        'sum' => round($sum, 2),
+        'count' => $count,
+    ]);
+})->name('coupon.clear');
+
+Route::post('/coupon/remove', function (Request $request) {
+    $request->session()->forget('coupon'); // ['code'=>..., 'percent'=>...]
+    // если нужно — можно вернуть пересчитанную корзину тоже
+    $cart = session('cart', []);
+    $count = collect($cart)->sum('qty');
+    $sum = 0;
+    foreach ($cart as $row) $sum += (float)$row['unit_price'] * (int)$row['qty'];
+
+    return response()->json([
+        'ok' => true,
+        'coupon' => null,
+        'cart' => $cart,
+        'count' => $count,
+        'sum' => $sum,
+        'message' => 'Купон удалён',
+    ]);
+})->name('coupon.remove');
+
+
+Route::get('/coupon/current', function (Request $request) {
+    $coupon = $request->session()->get('coupon'); // ['code'=>..., 'percent'=>...]
+    return response()->json([
+        'ok' => true,
+        'coupon' => $coupon ?: null,
+    ]);
+})->name('coupon.current');
+
+
 /**
  * Тест админа
  */
@@ -443,3 +1016,22 @@ Route::get('/admin-test', function () {
 
     return 'Admin test OK';
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

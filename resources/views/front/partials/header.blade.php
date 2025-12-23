@@ -9,13 +9,7 @@
             <div class="col-sm-6 col_last pull-right nobottommargin">
                 <div class="top-links">
                     <ul>
-                        <li><a href="#">Рубли <i class="fa fa-angle-down"></i></a>
-                            <ul class="sub-menu">
-                                <li><a href="#">Евро</a></li>
-                                <li><a href="#">Доллары</a></li>
-                                <li><a href="#">Фунты</a></li>
-                            </ul>
-                        </li>
+                    
 
                         <li>
                             <a href="#">
@@ -107,12 +101,25 @@
                 <div class="row">
                     <nav class="col-md-12">
 
-                        <div id="search-container">
-                            <div class="menu-center">
-                                <input name="s" placeholder="ИСКАТЬ НА САЙТЕ..." type="text" autofocus/>
-                                <div class="xbutton main-menu-search">X</div>
-                            </div>
-                        </div>
+                       <div id="search-container">
+    <div class="menu-center">
+        <form action="{{ route('search.index') }}" method="GET" id="siteSearchForm" style="width:100%;">
+    <input id="siteSearchInput"
+           class="site-search-input"
+           name="q"
+           placeholder="ИСКАТЬ НА САЙТЕ..."
+           type="text"
+           autocomplete="off" />
+</form>
+
+<div id="siteSearchDropdown" class="site-search-dropdown" style="display:none;"></div>
+
+
+        <div class="xbutton main-menu-search">X</div>
+
+    </div>
+</div>
+
 
                         <div id="menu-main">
                             <div class="navbar-left">
@@ -145,22 +152,17 @@
                                         <li>
                                             <a class="general" href="#">МАГАЗИН <i class="fa fa-angle-down"></i></a>
                                             <ul class="sub-menu">
-                                                <li><a href="#">СПИСОК ТОВАРОВ</a></li>
-                                                <li><a href="#">ОПИСАНИЕ ТОВАРА</a></li>
-                                                <li><a href="#">КОРЗИНА</a></li>
+                                                <li><a href="/products">СПИСОК ТОВАРОВ</a></li>
+                                                <li><a href="/cart">КОРЗИНА</a></li>
                                                 <li><a href="#">ОПЛАТА ТОВАРА</a></li>
                                             </ul>
                                         </li>
 
                                         <li>
-                                            <a class="general" href="#">НОВОСТИ <i class="fa fa-angle-down"></i></a>
-                                            <ul class="sub-menu">
-                                                <li><a href="#">СПИСОК НОВОСТЕЙ</a></li>
-                                                <li><a href="#">ОПИСАНИЕ НОВОСТИ</a></li>
-                                            </ul>
+                                            <a class="general" href="/news">НОВОСТИ</a>
                                         </li>
 
-                                        <li><a class="general" href="#">КОНТАКТЫ</a></li>
+                                        <li><a class="general" href="/contacts">КОНТАКТЫ</a></li>
 
                                         <li>
                                            @php
@@ -190,9 +192,9 @@
                 <div class="container">
                     <ul>
                         <li><a href="{{ url('/') }}">ГЛАВНАЯ</a></li>
-                        <li><a href="#">МАГАЗИН</a></li>
-                        <li><a href="#">НОВОСТИ</a></li>
-                        <li><a href="#">КОНТАКТЫ</a></li>
+                        <li><a href="/products">МАГАЗИН</a></li>
+                        <li><a href="/news">НОВОСТИ</a></li>
+                        <li><a href="/contacts">КОНТАКТЫ</a></li>
                     </ul>
                 </div>
             </div>
