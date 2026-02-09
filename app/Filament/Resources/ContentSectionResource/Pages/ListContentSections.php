@@ -22,25 +22,31 @@ class ListContentSections extends ListRecords
     public function getTabs(): array
     {
         return [
-            'all' => Tab::make('All'),
+            'all' => Tab::make(__('content_section.tabs.all')),
 
-            'banner' => Tab::make('Banners')
+            'banner' => Tab::make(__('content_section.tabs.banner'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('type', 'banner')),
 
-            'slider' => Tab::make('Sliders')
+            'slider' => Tab::make(__('content_section.tabs.slider'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('type', 'slider')),
 
-            'card' => Tab::make('Cards')
+            'card' => Tab::make(__('content_section.tabs.card'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('type', 'card')),
 
-            'project' => Tab::make('Projects')
+            'project' => Tab::make(__('content_section.tabs.project'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('type', 'project')),
 
-            'quote' => Tab::make('Quotes')
+            'quote' => Tab::make(__('content_section.tabs.quote'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('type', 'quote')),
 
-            'blog_card' => Tab::make('Blog Cards')
+            'blog_card' => Tab::make(__('content_section.tabs.blog_card'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('type', 'blog_card')),
+
+            'promo' => Tab::make(__('content_section.tabs.promo'))
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('type', 'promo')),
+
+            'catalog' => Tab::make(__('content_section.tabs.catalog'))
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('type', 'catalog')),
         ];
     }
 }

@@ -1,7 +1,7 @@
 @php
     /** @var \App\Models\TaskComment $comment */
     $comment = $getRecord();
-    $name = $comment?->user?->name ?? 'System';
+    $name = $comment?->user?->name ?? __('task_comments.common.system');
     $initial = mb_strtoupper(mb_substr($name, 0, 1));
 @endphp
 
@@ -19,6 +19,7 @@
             <div class="text-sm font-semibold text-white/90">
                 {{ $name }}
             </div>
+
             <div class="text-xs text-white/40">
                 {{ $comment->created_at?->format('d.m.Y H:i') }}
             </div>
@@ -33,7 +34,6 @@
             <div class="mt-2 flex flex-wrap gap-2">
                 @foreach($comment->attachments as $file)
                     @php
-                        // FileUpload сохраняет относительные пути (например: task-comments/xxx.png)
                         $url = asset('storage/' . ltrim($file, '/'));
                         $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
                         $isImage = in_array($ext, ['png','jpg','jpeg','webp','gif']);
@@ -43,7 +43,7 @@
                         <a href="{{ $url }}" target="_blank" class="block">
                             <img
                                 src="{{ $url }}"
-                                alt="attachment"
+                                alt="{{ __('task_comments.common.attachment') }}"
                                 class="h-24 max-w-[240px] object-cover rounded-lg border border-white/10 hover:opacity-90 transition"
                             />
                         </a>
@@ -52,6 +52,7 @@
                             href="{{ $url }}"
                             download
                             class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/80 hover:bg-white/10 transition"
+                            title="{{ __('task_comments.common.download') }}"
                         >
                             📎 {{ basename($file) }}
                         </a>

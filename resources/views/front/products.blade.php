@@ -5,10 +5,44 @@
 
 @section('content')
 @php
-  $couponPercent = (int) (session('coupon.percent') ?? 0);
+    use Illuminate\Support\Str;
+    use Illuminate\Support\Facades\Storage;
+
+    $couponPercent = (int) (session('coupon.percent') ?? 0);
+
+    /**
+     * Превращает то, что лежит в БД, в нормальный URL.
+     * Поддерживает:
+     * - full URL (http/https)
+     * - /storage/...
+     * - storage/... (относительный)
+     * - 1c/import_files/... (disk public)
+     */
+    $imgUrl = function (?string $path): ?string {
+        if (!$path) return null;
+
+        $path = trim($path);
+
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+
+        if (Str::startsWith($path, '/storage/')) {
+            return $path;
+        }
+
+        // иногда в БД может оказаться "storage/1c/..."
+        if (Str::startsWith($path, 'storage/')) {
+            return '/' . $path;
+        }
+
+        // основной кейс: "1c/import_files/....JPEG" или "products/announce/..."
+        return Storage::disk('public')->url($path);
+    };
 @endphp
 
-<section class="parallax-thight" style="background: transparent url('{{ asset('tiband/img/banners/5.jpg') }}') no-repeat fixed 50% 50px / cover ;">
+<section class="parallax-thight"
+         style="background: transparent url('{{ asset('tiband/img/banners/5.jpg') }}') no-repeat fixed 50% 50px / cover;">
     <div class="container">
         <div class="row">
             <div class="text-left-1">
@@ -68,9 +102,7 @@
                 <div class="lowerpad row">
                     @forelse($products ?? [] as $item)
                         @php
-                            $announceImage = $item->announce_image_path
-                                ? \Illuminate\Support\Facades\Storage::url($item->announce_image_path)
-                                : asset('tiband/img/products/1.jpg');
+                            $announceImage = $imgUrl($item->announce_image_path) ?: asset('tiband/img/products/1.jpg');
 
                             $hasSale = !empty($item->sale_price) && (float)$item->sale_price > 0;
                             $modalId = 'productModal-' . $item->id;
@@ -81,6 +113,11 @@
                             $shortDesc  = $item->announce_description ?: '';
                             $detailDesc = $item->description ?: '';
                             $detailExtra = $item->description_extra ?: '';
+
+                            // цены
+                            $old   = $hasSale ? (float)$item->price : null; // старая цена (если sale)
+                            $base  = $hasSale ? (float)$item->sale_price : (float)$item->price; // базовая (sale если есть)
+                            $final = $couponPercent > 0 ? round($base * (100 - $couponPercent) / 100, 2) : $base;
                         @endphp
 
                         <div class="col-lg-4 col-sm-6 col-xs-12">
@@ -104,37 +141,28 @@
                             <div class="shop-item-label">
                                 <h5>{{ $shortTitle }}</h5>
 
-                               @php
-  $old = $hasSale ? (float)$item->price : null;                 // зачеркнуть (если sale)
-  $base = $hasSale ? (float)$item->sale_price : (float)$item->price; // базовая цена (уже sale если есть)
-  $final = $couponPercent > 0 ? round($base * (100 - $couponPercent) / 100, 2) : $base;
-@endphp
+                                <div class="pull-left">
+                                    @if($old)
+                                        <del class="reduction">{{ number_format($old, 2, '.', ' ') }}</del>
+                                    @endif
 
-<div class="pull-left">
-    {{-- если есть sale_price — показываем старую цену --}}
-    @if($old)
-        <del class="reduction">{{ number_format($old, 2, '.', ' ') }}</del>
-    @endif
+                                    @if($couponPercent > 0)
+                                        <del class="reduction" style="margin-left:6px;">
+                                            {{ number_format($base, 2, '.', ' ') }}
+                                        </del>
 
-    {{-- если есть купон — показываем base зачёркнутой и final рядом --}}
-    @if($couponPercent > 0)
-        <del class="reduction" style="margin-left:6px;">
-            {{ number_format($base, 2, '.', ' ') }}
-        </del>
+                                        <span style="margin-left:6px;">
+                                            {{ number_format($final, 2, '.', ' ') }}
+                                        </span>
 
-        <span style="margin-left:6px;">
-            {{ number_format($final, 2, '.', ' ') }}
-        </span>
-
-        <span style="display:inline-block;margin-left:6px;font-size:10px;
-            padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.06);">
-            -{{ $couponPercent }}%
-        </span>
-    @else
-        <span>{{ number_format($base, 2, '.', ' ') }}</span>
-    @endif
-</div>
-
+                                        <span style="display:inline-block;margin-left:6px;font-size:10px;
+                                            padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.06);">
+                                            -{{ $couponPercent }}%
+                                        </span>
+                                    @else
+                                        <span>{{ number_format($base, 2, '.', ' ') }}</span>
+                                    @endif
+                                </div>
 
                                 <div class="rating pull-right">
                                     <i class="fa fa-star"></i>
@@ -164,9 +192,13 @@
                                             <div class="col-lg-5 col-sm-5 col-xs-12">
                                                 <div class="sp-wrap">
                                                     @if($gallery && $gallery->count())
-                                                        @foreach($gallery as $img)
-                                                            @php $imgUrl = \Illuminate\Support\Facades\Storage::url($img->image_path); @endphp
-                                                            <a href="{{ $imgUrl }}"><img src="{{ $imgUrl }}" alt=""></a>
+                                                        @foreach($gallery as $imgRow)
+                                                            @php
+                                                                $gUrl = $imgUrl($imgRow->image_path);
+                                                            @endphp
+                                                            @if($gUrl)
+                                                                <a href="{{ $gUrl }}"><img src="{{ $gUrl }}" alt=""></a>
+                                                            @endif
                                                         @endforeach
                                                     @else
                                                         <a href="{{ $announceImage }}"><img src="{{ $announceImage }}" alt=""></a>
@@ -179,35 +211,28 @@
                                                 <div class="shop-item-label big">
                                                     <h5>{{ $item->title }}</h5>
 
-                                                    @php
-  $old = $hasSale ? (float)$item->price : null;
-  $base = $hasSale ? (float)$item->sale_price : (float)$item->price;
-  $final = $couponPercent > 0 ? round($base * (100 - $couponPercent) / 100, 2) : $base;
-@endphp
+                                                    <span>
+                                                        @if($old)
+                                                            <del class="reduction">{{ number_format($old, 2, '.', ' ') }}</del>
+                                                        @endif
 
-<span>
-  @if($old)
-    <del class="reduction">{{ number_format($old, 2, '.', ' ') }}</del>
-  @endif
-
-  @if($couponPercent > 0)
-    <del class="reduction" style="margin-left:6px;">
-      {{ number_format($base, 2, '.', ' ') }}
-    </del>
-    <span style="margin-left:6px;">
-      {{ number_format($final, 2, '.', ' ') }}
-    </span>
-    <span style="display:inline-block;margin-left:6px;font-size:10px;
-      padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.06);">
-      -{{ $couponPercent }}%
-    </span>
-  @else
-    <span style="margin-left:6px;">
-      {{ number_format($base, 2, '.', ' ') }}
-    </span>
-  @endif
-</span>
-
+                                                        @if($couponPercent > 0)
+                                                            <del class="reduction" style="margin-left:6px;">
+                                                                {{ number_format($base, 2, '.', ' ') }}
+                                                            </del>
+                                                            <span style="margin-left:6px;">
+                                                                {{ number_format($final, 2, '.', ' ') }}
+                                                            </span>
+                                                            <span style="display:inline-block;margin-left:6px;font-size:10px;
+                                                                padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.06);">
+                                                                -{{ $couponPercent }}%
+                                                            </span>
+                                                        @else
+                                                            <span style="margin-left:6px;">
+                                                                {{ number_format($base, 2, '.', ' ') }}
+                                                            </span>
+                                                        @endif
+                                                    </span>
 
                                                     <div class="rating">
                                                         <i class="fa fa-star"></i>
@@ -217,21 +242,18 @@
                                                         <i class="fa fa-star-o"></i>
                                                     </div>
 
-                                                    {{-- обычное описание --}}
                                                     @if($shortDesc !== '')
                                                         <div style="margin-top:12px;">
                                                             <p>{{ $shortDesc }}</p>
                                                         </div>
                                                     @endif
 
-                                                    {{-- детальное описание --}}
                                                     @if($detailDesc !== '')
                                                         <div style="margin-top:10px;">
                                                             <p>{{ $detailDesc }}</p>
                                                         </div>
                                                     @endif
 
-                                                    {{-- доп. описание --}}
                                                     @if($detailExtra !== '')
                                                         <div style="margin-top:10px;">
                                                             <p>{{ $detailExtra }}</p>
@@ -283,7 +305,7 @@
             {{-- RIGHT SIDEBAR --}}
             <aside class="col-md-3 sidebar sidebar-right">
 
-                {{-- PRICE FILTER (исправлено: без класса .bar от Tiband) --}}
+                {{-- PRICE FILTER --}}
                 <section id="filter" class="widget widget-filter">
                     <h5>ФИЛЬТР ПО ЦЕНЕ</h5>
 
@@ -334,12 +356,12 @@
                     <ul>
                         @forelse($popularProducts ?? [] as $p)
                             @php
-                                $img = $p->announce_image_path
-                                    ? \Illuminate\Support\Facades\Storage::url($p->announce_image_path)
-                                    : asset('tiband/img/products/1.jpg');
+                                $pImg = $imgUrl($p->announce_image_path) ?: asset('tiband/img/products/1.jpg');
 
-                                $hasSale = !empty($p->sale_price) && (float)$p->sale_price > 0;
-                                $effective = $hasSale ? (float)$p->sale_price : (float)$p->price;
+                                $pHasSale = !empty($p->sale_price) && (float)$p->sale_price > 0;
+                                $pOld   = $pHasSale ? (float)$p->price : null;
+                                $pBase  = $pHasSale ? (float)$p->sale_price : (float)$p->price;
+                                $pFinal = $couponPercent > 0 ? round($pBase * (100 - $couponPercent) / 100, 2) : $pBase;
 
                                 $modalId = 'popularModal-' . $p->id;
 
@@ -354,7 +376,7 @@
                             <li>
                                 <div class="whitefade">
                                     <a href="#" data-toggle="modal" data-target="#{{ $modalId }}">
-                                        <img src="{{ $img }}" alt=""/>
+                                        <img src="{{ $pImg }}" alt=""/>
                                     </a>
                                 </div>
                                 <div class="shop-item-label">
@@ -363,28 +385,30 @@
                                             {{ $shortTitle }}
                                         </a>
                                     </h5>
-                                    <span>
-  @if($old)
-    <del class="reduction">{{ number_format($old, 2, '.', ' ') }}</del>
-  @endif
 
-  @if($couponPercent > 0)
-    <del class="reduction" style="margin-left:6px;">
-      {{ number_format($base, 2, '.', ' ') }}
-    </del>
-    <span style="margin-left:6px;">
-      {{ number_format($final, 2, '.', ' ') }}
-    </span>
-    <span style="display:inline-block;margin-left:6px;font-size:10px;
-      padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.06);">
-      -{{ $couponPercent }}%
-    </span>
-  @else
-    <span style="margin-left:6px;">
-      {{ number_format($base, 2, '.', ' ') }}
-    </span>
-  @endif
-</span>
+                                    <span>
+                                        @if($pOld)
+                                            <del class="reduction">{{ number_format($pOld, 2, '.', ' ') }}</del>
+                                        @endif
+
+                                        @if($couponPercent > 0)
+                                            <del class="reduction" style="margin-left:6px;">
+                                                {{ number_format($pBase, 2, '.', ' ') }}
+                                            </del>
+                                            <span style="margin-left:6px;">
+                                                {{ number_format($pFinal, 2, '.', ' ') }}
+                                            </span>
+                                            <span style="display:inline-block;margin-left:6px;font-size:10px;
+                                                padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.06);">
+                                                -{{ $couponPercent }}%
+                                            </span>
+                                        @else
+                                            <span style="margin-left:6px;">
+                                                {{ number_format($pBase, 2, '.', ' ') }}
+                                            </span>
+                                        @endif
+                                    </span>
+
                                     <div class="rating">
                                         <i class="fa fa-star"></i>
                                         <i class="fa fa-star"></i>
@@ -413,11 +437,13 @@
                                                     <div class="sp-wrap">
                                                         @if($pGallery && $pGallery->count())
                                                             @foreach($pGallery as $imgRow)
-                                                                @php $imgUrl = \Illuminate\Support\Facades\Storage::url($imgRow->image_path); @endphp
-                                                                <a href="{{ $imgUrl }}"><img src="{{ $imgUrl }}" alt=""></a>
+                                                                @php $gUrl = $imgUrl($imgRow->image_path); @endphp
+                                                                @if($gUrl)
+                                                                    <a href="{{ $gUrl }}"><img src="{{ $gUrl }}" alt=""></a>
+                                                                @endif
                                                             @endforeach
                                                         @else
-                                                            <a href="{{ $img }}"><img src="{{ $img }}" alt=""></a>
+                                                            <a href="{{ $pImg }}"><img src="{{ $pImg }}" alt=""></a>
                                                         @endif
                                                     </div>
                                                 </div>
@@ -426,35 +452,28 @@
                                                     <div class="shop-item-label big">
                                                         <h5>{{ $p->title }}</h5>
 
-                                                        @php
-  $old = $hasSale ? (float)$item->price : null;
-  $base = $hasSale ? (float)$item->sale_price : (float)$item->price;
-  $final = $couponPercent > 0 ? round($base * (100 - $couponPercent) / 100, 2) : $base;
-@endphp
+                                                        <span>
+                                                            @if($pOld)
+                                                                <del class="reduction">{{ number_format($pOld, 2, '.', ' ') }}</del>
+                                                            @endif
 
-<span>
-  @if($old)
-    <del class="reduction">{{ number_format($old, 2, '.', ' ') }}</del>
-  @endif
-
-  @if($couponPercent > 0)
-    <del class="reduction" style="margin-left:6px;">
-      {{ number_format($base, 2, '.', ' ') }}
-    </del>
-    <span style="margin-left:6px;">
-      {{ number_format($final, 2, '.', ' ') }}
-    </span>
-    <span style="display:inline-block;margin-left:6px;font-size:10px;
-      padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.06);">
-      -{{ $couponPercent }}%
-    </span>
-  @else
-    <span style="margin-left:6px;">
-      {{ number_format($base, 2, '.', ' ') }}
-    </span>
-  @endif
-</span>
-
+                                                            @if($couponPercent > 0)
+                                                                <del class="reduction" style="margin-left:6px;">
+                                                                    {{ number_format($pBase, 2, '.', ' ') }}
+                                                                </del>
+                                                                <span style="margin-left:6px;">
+                                                                    {{ number_format($pFinal, 2, '.', ' ') }}
+                                                                </span>
+                                                                <span style="display:inline-block;margin-left:6px;font-size:10px;
+                                                                    padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.06);">
+                                                                    -{{ $couponPercent }}%
+                                                                </span>
+                                                            @else
+                                                                <span style="margin-left:6px;">
+                                                                    {{ number_format($pBase, 2, '.', ' ') }}
+                                                                </span>
+                                                            @endif
+                                                        </span>
 
                                                         <div class="rating">
                                                             <i class="fa fa-star"></i>
@@ -464,28 +483,24 @@
                                                             <i class="fa fa-star-o"></i>
                                                         </div>
 
-                                                        {{-- обычное описание --}}
                                                         @if($shortDesc !== '')
                                                             <div style="margin-top:12px;">
                                                                 <p>{{ $shortDesc }}</p>
                                                             </div>
                                                         @endif
 
-                                                        {{-- детальное описание --}}
                                                         @if($detailDesc !== '')
                                                             <div style="margin-top:10px;">
                                                                 <p>{{ $detailDesc }}</p>
                                                             </div>
                                                         @endif
 
-                                                        {{-- доп. описание --}}
                                                         @if($detailExtra !== '')
                                                             <div style="margin-top:10px;">
                                                                 <p>{{ $detailExtra }}</p>
                                                             </div>
                                                         @endif
 
-                                                        {{-- qty + add --}}
                                                         <div style="margin-top:14px;">
                                                             <form class="ammount js-qty-form">
                                                                 <button type="button" class="js-qty-minus">-</button>
@@ -523,7 +538,7 @@
     </div>
 </section>
 
-{{-- JS: 2 handles range slider (левый=min, правый=max) --}}
+{{-- JS: range slider --}}
 <script>
 (function () {
   const bar = document.getElementById('priceBar');
@@ -545,12 +560,10 @@
   let curMax = (bar.dataset.curMax !== '') ? parseFloat(bar.dataset.curMax) : maxAllowed;
 
   function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
-
   function valueToPct(v){
     if (maxAllowed === minAllowed) return 0;
     return ((v - minAllowed) / (maxAllowed - minAllowed)) * 100;
   }
-
   function pctToValue(pct){
     return minAllowed + (maxAllowed - minAllowed) * (pct / 100);
   }
@@ -576,8 +589,7 @@
     maxInput.value = String(Math.round(curMax));
   }
 
-  let dragging = null; // 'min' | 'max'
-
+  let dragging = null;
   function clientX(e){
     if (e.touches && e.touches.length) return e.touches[0].clientX;
     return e.clientX;
@@ -603,7 +615,6 @@
     pct = clamp(pct, 0, 100);
 
     let val = pctToValue(pct);
-
     if (dragging === 'min') {
       val = Math.min(val, curMax);
       curMin = val;
@@ -611,7 +622,6 @@
       val = Math.max(val, curMin);
       curMax = val;
     }
-
     sync();
   }
 
@@ -649,5 +659,4 @@
   sync();
 })();
 </script>
-
 @endsection

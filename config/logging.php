@@ -36,6 +36,7 @@ return [
         'trace' => env('LOG_DEPRECATIONS_TRACE', false),
     ],
 
+
     /*
     |--------------------------------------------------------------------------
     | Log Channels
@@ -51,6 +52,12 @@ return [
     */
 
     'channels' => [
+
+    'onec' => [
+    'driver' => 'single',
+    'path' => storage_path('logs/onec.log'),
+    'level' => 'debug',
+],
 
         'stack' => [
             'driver' => 'stack',

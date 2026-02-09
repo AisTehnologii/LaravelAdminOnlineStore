@@ -4,30 +4,39 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProductResource\Pages;
 use App\Models\Product;
-
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
-
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Grouping\Group;
-
 use Illuminate\Database\Eloquent\Builder;
 
 class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
+    protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
+    protected static ?int $navigationSort = 30;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-shopping-bag';
-    protected static ?string $navigationGroup = 'Shop';
-    protected static ?string $navigationLabel = 'Catalog';
-    protected static ?int    $navigationSort  = 30;
-
-    public static function shouldRegisterNavigation(): bool
+    public static function getNavigationGroup(): ?string
     {
-        return static::canViewAny();
+        return __('nav.groups.shop');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('product.page.nav_label');
+    }
+
+    public static function getLabel(): ?string
+    {
+        return __('product.page.nav_label');
+    }
+
+    public static function getPluralLabel(): ?string
+    {
+        return __('product.page.nav_label');
     }
 
     public static function form(Form $form): Form
@@ -35,116 +44,131 @@ class ProductResource extends Resource
         return $form->schema([
             Forms\Components\Grid::make(3)->schema([
                 Forms\Components\Select::make('section_id')
-                    ->label('Section')
+                    ->label(__('product.form.section'))
                     ->relationship(
                         name: 'section',
                         titleAttribute: 'title',
                         modifyQueryUsing: fn (Builder $query) =>
-                            $query->where('type', 'catalog')->orderBy('position') // ✅ catalog
+                            $query->where('type', 'catalog')->orderBy('position')
                     )
                     ->preload()
                     ->searchable()
-                    ->required()
-                    ->createOptionForm([
-                        Forms\Components\Hidden::make('type')->default('catalog'), // ✅ catalog
-                        Forms\Components\TextInput::make('title')->required(),
-                        Forms\Components\TextInput::make('slug')->required(),
-                        Forms\Components\TextInput::make('position')->numeric()->default(1),
-                        Forms\Components\Toggle::make('is_active')->default(true),
-                    ]),
+                    ->required(),
 
                 Forms\Components\Select::make('locale')
+                    ->label(__('product.form.locale'))
                     ->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română'])
-                    ->default('en')
                     ->required(),
 
                 Forms\Components\TextInput::make('position')
+                    ->label(__('product.form.position'))
                     ->numeric()
-                    ->default(1)
                     ->required(),
             ]),
 
-            Forms\Components\Toggle::make('is_active')->default(true),
+            Forms\Components\Toggle::make('is_active')
+                ->label(__('product.form.active'))
+                ->default(true),
 
-            Forms\Components\Section::make('Preview / Announce')->schema([
-                Forms\Components\TextInput::make('announce_title')->label('Announce title')->maxLength(255),
-                Forms\Components\Textarea::make('announce_description')->label('Announce description')->rows(3),
-                Forms\Components\FileUpload::make('announce_image_path')
-                    ->label('Announce image')
-                    ->image()
-                    ->directory('products/announce')
-                    ->nullable(),
-            ])->columns(2),
+            Forms\Components\Section::make(__('product.form.preview.title'))
+                ->schema([
+                    Forms\Components\TextInput::make('announce_title')
+                        ->label(__('product.form.preview.title_field')),
 
-            Forms\Components\Section::make('Details')->schema([
-                Forms\Components\TextInput::make('title')->label('Detail title')->required()->maxLength(255),
-                Forms\Components\Textarea::make('description')->label('Detail description')->rows(5),
-                Forms\Components\Textarea::make('description_extra')->label('Additional detail description')->rows(4),
+                    Forms\Components\Textarea::make('announce_description')
+                        ->label(__('product.form.preview.desc')),
 
-                Forms\Components\Repeater::make('images')
-                    ->relationship()
-                    ->label('Detail images')
-                    ->schema([
-                        Forms\Components\FileUpload::make('image_path')
-                            ->label('Image')
-                            ->image()
-                            ->directory('products/details')
-                            ->required(),
-                        Forms\Components\TextInput::make('position')->numeric()->default(1),
-                    ])
-                    ->orderColumn('position')
-                    ->collapsed()
-                    ->defaultItems(0),
-            ])->columns(2),
+                    Forms\Components\FileUpload::make('announce_image_path')
+                        ->label(__('product.form.preview.image'))
+                        ->disk('public')                 // ✅ важно
+                        ->visibility('public')           // ✅ важно
+                        ->image()
+                        // directory можно оставить — он влияет только на новые загрузки
+                        ->directory('products/announce'),
+                ])
+                ->columns(2),
 
-            Forms\Components\Section::make('Price')->schema([
-                Forms\Components\TextInput::make('price')->numeric()->label('Price (no discount)'),
-                Forms\Components\TextInput::make('sale_price')->numeric()->label('Sale price'),
-            ])->columns(2),
+            Forms\Components\Section::make(__('product.form.details.title'))
+                ->schema([
+                    Forms\Components\TextInput::make('title')
+                        ->label(__('product.form.details.title_field'))
+                        ->required(),
+
+                    Forms\Components\Textarea::make('description')
+                        ->label(__('product.form.details.desc')),
+
+                    Forms\Components\Textarea::make('description_extra')
+                        ->label(__('product.form.details.extra_desc')),
+
+                    Forms\Components\Repeater::make('images')
+                        ->relationship()
+                        ->label(__('product.form.details.images'))
+                        ->schema([
+                            Forms\Components\FileUpload::make('image_path')
+                                ->label(__('product.form.details.image'))
+                                ->disk('public')         // ✅ важно
+                                ->visibility('public')   // ✅ важно
+                                ->image()
+                                ->directory('products/details')
+                                ->required(),
+
+                            Forms\Components\TextInput::make('position')->numeric(),
+                        ])
+                        ->orderColumn('position')
+                        ->collapsed(),
+                ])
+                ->columns(2),
+
+            Forms\Components\Section::make(__('product.form.price.title'))
+                ->schema([
+                    Forms\Components\TextInput::make('price')
+                        ->label(__('product.form.price.price'))
+                        ->numeric(),
+
+                    Forms\Components\TextInput::make('sale_price')
+                        ->label(__('product.form.price.sale_price'))
+                        ->numeric(),
+                ])
+                ->columns(2),
         ]);
     }
 
     public static function table(Table $table): Table
     {
-        $type = 'catalog'; // ✅ catalog
-
         return $table
             ->modifyQueryUsing(fn (Builder $query) =>
                 $query->with('section')->orderBy('section_id')->orderBy('position')
             )
             ->groups([
-                Group::make('section.title')->label('Section')->collapsible(),
+                Group::make('section.title')->label(__('product.table.section'))->collapsible(),
             ])
-            ->defaultGroup('section.title')
-            ->defaultSort('position')
             ->columns([
-                Tables\Columns\TextColumn::make('locale')->badge(),
-                Tables\Columns\IconColumn::make('is_active')->boolean(),
-                Tables\Columns\TextColumn::make('position')->sortable(),
-                Tables\Columns\ImageColumn::make('announce_image_path')->square()->label('Image'),
-                Tables\Columns\TextColumn::make('title')->limit(40)->searchable(),
-                Tables\Columns\TextColumn::make('sale_price')->label('Sale')->sortable(),
-                Tables\Columns\TextColumn::make('price')->label('Price')->sortable(),
-                Tables\Columns\TextColumn::make('updated_at')->dateTime('Y-m-d H:i')->sortable(),
+                Tables\Columns\TextColumn::make('locale')->label(__('product.table.locale'))->badge(),
+                Tables\Columns\IconColumn::make('is_active')->label(__('product.table.active'))->boolean(),
+                Tables\Columns\TextColumn::make('position')->label(__('product.table.position'))->sortable(),
+
+                Tables\Columns\ImageColumn::make('announce_image_path')
+                    ->label(__('product.table.image'))
+                    ->disk('public')      // ✅ важно
+                    ->visibility('public')
+                    ->square(),
+
+                Tables\Columns\TextColumn::make('title')->label(__('product.table.title'))->searchable(),
+                Tables\Columns\TextColumn::make('sale_price')->label(__('product.table.sale'))->sortable(),
+                Tables\Columns\TextColumn::make('price')->label(__('product.table.price'))->sortable(),
+                Tables\Columns\TextColumn::make('updated_at')->label(__('product.table.updated'))->dateTime(),
             ])
             ->filters([
                 SelectFilter::make('section_id')
-                    ->label('Section')
-                    ->relationship(
-                        name: 'section',
-                        titleAttribute: 'title',
-                        modifyQueryUsing: fn (Builder $query) =>
-                            $query->where('type', $type)->orderBy('position') // ✅ catalog
-                    ),
-                SelectFilter::make('locale')
+                    ->label(__('product.filters.section'))
+                    ->relationship('section', 'title'),
+
+                SelectFilter::make('locale')->label(__('product.filters.locale'))
                     ->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română']),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
             ]);
     }
 

@@ -20,10 +20,29 @@ class BlogCardResource extends Resource
 {
     protected static ?string $model = BlogCard::class;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-newspaper';
-    protected static ?string $navigationGroup = 'Content';
-    protected static ?string $navigationLabel = 'Blog cards';
-    protected static ?int    $navigationSort  = 60;
+    protected static ?string $navigationIcon = 'heroicon-o-newspaper';
+    protected static ?int $navigationSort = 60;
+
+    // ✅ меню
+    public static function getNavigationGroup(): ?string
+    {
+        return __('nav.groups.content');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('blog_card.page.nav_label');
+    }
+
+    public static function getLabel(): ?string
+    {
+        return __('blog_card.page.nav_label');
+    }
+
+    public static function getPluralLabel(): ?string
+    {
+        return __('blog_card.page.nav_label');
+    }
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -37,7 +56,7 @@ class BlogCardResource extends Resource
         return $form->schema([
             Forms\Components\Grid::make(3)->schema([
                 Forms\Components\Select::make('section_id')
-                    ->label('Section')
+                    ->label(__('blog_card.form.section'))
                     ->relationship(
                         name: 'section',
                         titleAttribute: 'title',
@@ -50,23 +69,31 @@ class BlogCardResource extends Resource
                     ->required(),
 
                 Forms\Components\Select::make('locale')
-                    ->label('Locale')
+                    ->label(__('blog_card.form.locale'))
                     ->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română'])
                     ->default('en')
                     ->required(),
 
                 Forms\Components\TextInput::make('position')
-                    ->label('Position')
+                    ->label(__('blog_card.form.position'))
                     ->numeric()
                     ->default(0)
                     ->required(),
             ]),
 
-            Forms\Components\DatePicker::make('date')->label('Date')->nullable(),
+            Forms\Components\DatePicker::make('date')
+                ->label(__('blog_card.form.date'))
+                ->nullable(),
 
-            Forms\Components\TextInput::make('title')->required()->maxLength(255),
+            Forms\Components\TextInput::make('title')
+                ->label(__('blog_card.form.title'))
+                ->required()
+                ->maxLength(255),
 
-            Forms\Components\TextInput::make('url')->label('URL')->maxLength(255)->nullable(),
+            Forms\Components\TextInput::make('url')
+                ->label(__('blog_card.form.url'))
+                ->maxLength(255)
+                ->nullable(),
         ]);
     }
 
@@ -81,26 +108,32 @@ class BlogCardResource extends Resource
                 ->orderBy('position')
             )
             ->groups([
-                Group::make('section.title')->label('Section')->collapsible()->titlePrefixedWithLabel(false),
+                Group::make('section.title')
+                    ->label(__('blog_card.form.section'))
+                    ->collapsible()
+                    ->titlePrefixedWithLabel(false),
             ])
             ->defaultGroup('section.title')
             ->defaultSort('position')
 
             ->headerActions([
                 Tables\Actions\Action::make('export')
-                    ->label('Экспорт данных')
+                    ->label(__('blog_card.export.action'))
                     ->icon('heroicon-o-arrow-down-tray')
-                    ->modalHeading('Экспорт данных')
+                    ->modalHeading(__('blog_card.export.heading'))
                     ->form([
                         Forms\Components\Select::make('scope')
-                            ->label('Что экспортировать?')
-                            ->options(['all' => 'Все секции', 'section' => 'Только выбранную секцию'])
+                            ->label(__('blog_card.export.scope'))
+                            ->options([
+                                'all'     => __('blog_card.export.scope_all'),
+                                'section' => __('blog_card.export.scope_section'),
+                            ])
                             ->default('all')
                             ->required()
                             ->live(),
 
                         Forms\Components\Select::make('section_id')
-                            ->label('Секция')
+                            ->label(__('blog_card.export.section'))
                             ->options(fn () => ContentSection::query()
                                 ->where('type', $type)
                                 ->orderBy('position')
@@ -111,20 +144,23 @@ class BlogCardResource extends Resource
                             ->searchable(),
 
                         Forms\Components\Select::make('format')
-                            ->label('Формат')
-                            ->options(['pdf' => 'PDF', 'xml' => 'XML'])
+                            ->label(__('blog_card.export.format'))
+                            ->options([
+                                'pdf' => __('blog_card.export.pdf'),
+                                'xml' => __('blog_card.export.xml'),
+                            ])
                             ->default('pdf')
                             ->required(),
                     ])
-                    ->action(function (array $data, $livewire) {
+                    ->action(function (array $data, $livewire) use ($type) {
                         $columns = [
-                            'section.title' => 'Section',
-                            'locale'        => 'Locale',
-                            'position'      => 'Position',
-                            'date'          => 'Date',
-                            'title'         => 'Title',
-                            'url'           => 'URL',
-                            'updated_at'    => 'Updated at',
+                            'section.title' => __('blog_card.export.columns.section'),
+                            'locale'        => __('blog_card.export.columns.locale'),
+                            'position'      => __('blog_card.export.columns.position'),
+                            'date'          => __('blog_card.export.columns.date'),
+                            'title'         => __('blog_card.export.columns.title'),
+                            'url'           => __('blog_card.export.columns.url'),
+                            'updated_at'    => __('blog_card.export.columns.updated'),
                         ];
 
                         $query = method_exists($livewire, 'getFilteredTableQuery')
@@ -138,8 +174,9 @@ class BlogCardResource extends Resource
                         }
 
                         $rows = $query->get();
-                        $title = 'Blog cards export';
-                        $subtitle = now()->format('Y-m-d H:i');
+
+                        $title = __('blog_card.export.title');
+                        $subtitle = now()->format(__('blog_card.export.subtitle_fmt'));
 
                         if (($data['format'] ?? 'pdf') === 'xml') {
                             $xml = TableExport::toXml('export', 'row', $columns, $rows);
@@ -160,16 +197,38 @@ class BlogCardResource extends Resource
             ])
 
             ->columns([
-                Tables\Columns\TextColumn::make('locale')->badge()->sortable(),
-                Tables\Columns\TextColumn::make('position')->sortable(),
-                Tables\Columns\TextColumn::make('date')->date('Y-m-d')->sortable(),
-                Tables\Columns\TextColumn::make('title')->searchable()->limit(50),
-                Tables\Columns\TextColumn::make('url')->toggleable()->limit(40),
-                Tables\Columns\TextColumn::make('updated_at')->dateTime('Y-m-d H:i')->sortable(),
+                Tables\Columns\TextColumn::make('locale')
+                    ->label(__('blog_card.table.locale'))
+                    ->badge()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('position')
+                    ->label(__('blog_card.table.position'))
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('date')
+                    ->label(__('blog_card.table.date'))
+                    ->date('Y-m-d')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('title')
+                    ->label(__('blog_card.table.title'))
+                    ->searchable()
+                    ->limit(50),
+
+                Tables\Columns\TextColumn::make('url')
+                    ->label(__('blog_card.table.url'))
+                    ->toggleable()
+                    ->limit(40),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label(__('blog_card.table.updated_at'))
+                    ->dateTime('Y-m-d H:i')
+                    ->sortable(),
             ])
             ->filters([
                 SelectFilter::make('section_id')
-                    ->label('Section')
+                    ->label(__('blog_card.filters.section'))
                     ->relationship(
                         name: 'section',
                         titleAttribute: 'title',
@@ -179,7 +238,7 @@ class BlogCardResource extends Resource
                     ),
 
                 SelectFilter::make('locale')
-                    ->label('Locale')
+                    ->label(__('blog_card.filters.locale'))
                     ->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română']),
             ])
             ->actions([

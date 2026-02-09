@@ -17,8 +17,8 @@ class ListBackups extends ListRecords
     protected static string $view = 'filament.resources.backups.list-backups';
 
     /**
-     * ✅ Скрываем стандартный заголовок Filament,
-     * чтобы не дублировалось с твоей кастомной версткой.
+     * Скрываем стандартный заголовок Filament,
+     * чтобы не дублировалось с кастомной версткой.
      */
     public function getHeading(): string
     {
@@ -31,7 +31,7 @@ class ListBackups extends ListRecords
     }
 
     /**
-     * ✅ Авторизация: только SUPER_ADMIN (is_admin=1) или роли admin/SUPER_ADMIN
+     * Авторизация: только SUPER_ADMIN (is_admin=1) или роли admin/SUPER_ADMIN
      */
     protected function canManageBackups(): bool
     {
@@ -41,12 +41,10 @@ class ListBackups extends ListRecords
             return false;
         }
 
-        // SUPER_ADMIN по флагу
         if ((int) ($u->is_admin ?? 0) === 1) {
             return true;
         }
 
-        // роли Spatie
         if (method_exists($u, 'hasRole')) {
             return $u->hasRole('admin') || $u->hasRole('SUPER_ADMIN');
         }
@@ -58,18 +56,17 @@ class ListBackups extends ListRecords
     {
         return [
             Action::make('createBackup')
-                ->label('Создать бэкап проекта')
+                ->label(fn () => __('backup.actions.create_project'))
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalHeading('Создать бэкап')
-                ->modalDescription('Будет сформирован ZIP проекта.')
+                ->modalHeading(fn () => __('backup.modal.create_heading'))
+                ->modalDescription(fn () => __('backup.modal.create_description'))
                 ->visible(fn () => $this->canManageBackups())
                 ->action(function () {
-                    // ✅ Тут НЕ Gate, чтобы не ловить 403 от Shield/Policy
                     if (! $this->canManageBackups()) {
                         Notification::make()
-                            ->title('Недостаточно прав')
+                            ->title(__('backup.notifications.no_rights.title'))
                             ->danger()
                             ->send();
 
@@ -79,16 +76,16 @@ class ListBackups extends ListRecords
                     $data = app(ProjectBackupService::class)->create('local');
 
                     Backup::create([
-                        'name' => $data['filename'],
-                        'filename' => $data['filename'],
-                        'disk' => $data['disk'],
-                        'path' => $data['path'],
+                        'name'       => $data['filename'],
+                        'filename'   => $data['filename'],
+                        'disk'       => $data['disk'],
+                        'path'       => $data['path'],
                         'size_bytes' => $data['size_bytes'],
                         'created_by' => Auth::id(),
                     ]);
 
                     Notification::make()
-                        ->title('Бэкап создан')
+                        ->title(__('backup.notifications.created.title'))
                         ->body($data['filename'])
                         ->success()
                         ->send();

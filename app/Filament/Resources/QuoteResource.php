@@ -20,10 +20,29 @@ class QuoteResource extends Resource
 {
     protected static ?string $model = Quote::class;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-chat-bubble-left-right';
-    protected static ?string $navigationGroup = 'Content';
-    protected static ?string $navigationLabel = 'Quotes';
-    protected static ?int    $navigationSort  = 50;
+    protected static ?string $navigationIcon = 'heroicon-o-chat-bubble-left-right';
+    protected static ?int $navigationSort = 50;
+
+    // ✅ меню
+    public static function getNavigationGroup(): ?string
+    {
+        return __('nav.groups.content');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('quote.page.nav_label');
+    }
+
+    public static function getLabel(): ?string
+    {
+        return __('quote.page.nav_label');
+    }
+
+    public static function getPluralLabel(): ?string
+    {
+        return __('quote.page.nav_label');
+    }
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -37,7 +56,7 @@ class QuoteResource extends Resource
         return $form->schema([
             Forms\Components\Grid::make(3)->schema([
                 Forms\Components\Select::make('section_id')
-                    ->label('Section')
+                    ->label(__('quote.form.section'))
                     ->relationship(
                         name: 'section',
                         titleAttribute: 'title',
@@ -50,29 +69,30 @@ class QuoteResource extends Resource
                     ->required(),
 
                 Forms\Components\Select::make('locale')
-                    ->label('Locale')
+                    ->label(__('quote.form.locale'))
                     ->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română'])
                     ->default('en')
                     ->required(),
 
                 Forms\Components\TextInput::make('position')
-                    ->label('Position')
+                    ->label(__('quote.form.position'))
                     ->numeric()
                     ->default(0)
                     ->required(),
             ]),
 
             Forms\Components\Textarea::make('text')
-                ->label('Text')
+                ->label(__('quote.form.text'))
                 ->rows(4)
                 ->required(),
 
             Forms\Components\TextInput::make('author')
+                ->label(__('quote.form.author'))
                 ->required()
                 ->maxLength(255),
 
             Forms\Components\TextInput::make('role')
-                ->label('Role')
+                ->label(__('quote.form.role'))
                 ->maxLength(255)
                 ->nullable(),
         ]);
@@ -89,26 +109,31 @@ class QuoteResource extends Resource
                 ->orderBy('position')
             )
             ->groups([
-                Group::make('section.title')->label('Section')->collapsible()->titlePrefixedWithLabel(false),
+                Group::make('section.title')
+                    ->label(__('quote.form.section'))
+                    ->collapsible()
+                    ->titlePrefixedWithLabel(false),
             ])
             ->defaultGroup('section.title')
             ->defaultSort('position')
-
             ->headerActions([
                 Tables\Actions\Action::make('export')
-                    ->label('Экспорт данных')
+                    ->label(__('quote.export.action'))
                     ->icon('heroicon-o-arrow-down-tray')
-                    ->modalHeading('Экспорт данных')
+                    ->modalHeading(__('quote.export.heading'))
                     ->form([
                         Forms\Components\Select::make('scope')
-                            ->label('Что экспортировать?')
-                            ->options(['all' => 'Все секции', 'section' => 'Только выбранную секцию'])
+                            ->label(__('quote.export.scope'))
+                            ->options([
+                                'all'     => __('quote.export.scope_all'),
+                                'section' => __('quote.export.scope_section'),
+                            ])
                             ->default('all')
                             ->required()
                             ->live(),
 
                         Forms\Components\Select::make('section_id')
-                            ->label('Секция')
+                            ->label(__('quote.export.section'))
                             ->options(fn () => ContentSection::query()
                                 ->where('type', $type)
                                 ->orderBy('position')
@@ -119,20 +144,23 @@ class QuoteResource extends Resource
                             ->searchable(),
 
                         Forms\Components\Select::make('format')
-                            ->label('Формат')
-                            ->options(['pdf' => 'PDF', 'xml' => 'XML'])
+                            ->label(__('quote.export.format'))
+                            ->options([
+                                'pdf' => __('quote.export.pdf'),
+                                'xml' => __('quote.export.xml'),
+                            ])
                             ->default('pdf')
                             ->required(),
                     ])
-                    ->action(function (array $data, $livewire) {
+                    ->action(function (array $data, $livewire) use ($type) {
                         $columns = [
-                            'section.title' => 'Section',
-                            'locale'        => 'Locale',
-                            'position'      => 'Position',
-                            'author'        => 'Author',
-                            'role'          => 'Role',
-                            'text'          => 'Text',
-                            'updated_at'    => 'Updated at',
+                            'section.title' => __('quote.export.columns.section'),
+                            'locale'        => __('quote.export.columns.locale'),
+                            'position'      => __('quote.export.columns.position'),
+                            'author'        => __('quote.export.columns.author'),
+                            'role'          => __('quote.export.columns.role'),
+                            'text'          => __('quote.export.columns.text'),
+                            'updated_at'    => __('quote.export.columns.updated'),
                         ];
 
                         $query = method_exists($livewire, 'getFilteredTableQuery')
@@ -146,8 +174,9 @@ class QuoteResource extends Resource
                         }
 
                         $rows = $query->get();
-                        $title = 'Quotes export';
-                        $subtitle = now()->format('Y-m-d H:i');
+
+                        $title = __('quote.export.title');
+                        $subtitle = now()->format(__('quote.export.subtitle_fmt'));
 
                         if (($data['format'] ?? 'pdf') === 'xml') {
                             $xml = TableExport::toXml('export', 'row', $columns, $rows);
@@ -166,17 +195,32 @@ class QuoteResource extends Resource
                         );
                     }),
             ])
-
             ->columns([
-                Tables\Columns\TextColumn::make('locale')->badge()->sortable(),
-                Tables\Columns\TextColumn::make('position')->sortable(),
-                Tables\Columns\TextColumn::make('author')->searchable(),
-                Tables\Columns\TextColumn::make('text')->limit(60)->label('Text'),
-                Tables\Columns\TextColumn::make('updated_at')->dateTime('Y-m-d H:i')->sortable(),
+                Tables\Columns\TextColumn::make('locale')
+                    ->label(__('quote.table.locale'))
+                    ->badge()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('position')
+                    ->label(__('quote.table.position'))
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('author')
+                    ->label(__('quote.table.author'))
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('text')
+                    ->label(__('quote.table.text'))
+                    ->limit(60),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label(__('quote.table.updated_at'))
+                    ->dateTime('Y-m-d H:i')
+                    ->sortable(),
             ])
             ->filters([
                 SelectFilter::make('section_id')
-                    ->label('Section')
+                    ->label(__('quote.filters.section'))
                     ->relationship(
                         name: 'section',
                         titleAttribute: 'title',
@@ -186,7 +230,7 @@ class QuoteResource extends Resource
                     ),
 
                 SelectFilter::make('locale')
-                    ->label('Locale')
+                    ->label(__('quote.filters.locale'))
                     ->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română']),
             ])
             ->actions([

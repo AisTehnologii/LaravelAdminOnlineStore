@@ -2,17 +2,27 @@
     <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
             <div class="flex items-center gap-2">
-                <div class="text-sm font-semibold text-white/90">👥 Пользователи онлайн</div>
-                <span class="dash-pill dash-pill-amber">🟢 {{ $count }}</span>
-                <span class="dash-pill">⏱ {{ $onlineWindowMinutes }} мин</span>
+                <div class="text-sm font-semibold text-white/90">
+                    {{ __('dashboard.widgets.online_users.title') }}
+                </div>
+
+                <span class="dash-pill dash-pill-amber">
+                    {{ __('dashboard.widgets.online_users.count', ['count' => $count]) }}
+                </span>
+
+                <span class="dash-pill">
+                    {{ __('dashboard.widgets.online_users.window', ['minutes' => $onlineWindowMinutes]) }}
+                </span>
             </div>
 
             <div class="muted text-sm mt-1">
-                Кто сейчас активен в панели — обновляется по last_seen_at.
+                {{ __('dashboard.widgets.online_users.subtitle') }}
             </div>
         </div>
 
-        <span class="dash-pill">Live</span>
+        <span class="dash-pill">
+            {{ __('dashboard.widgets.common.live') }}
+        </span>
     </div>
 
     <div class="mt-4 space-y-2">
@@ -28,11 +38,14 @@
                 </div>
 
                 <span class="dash-pill">
-                    🕒 {{ $u->last_seen_at ? \Carbon\Carbon::parse($u->last_seen_at)->format('H:i:s') : '—' }}
+                    {{ __('dashboard.widgets.common.time') }}
+                    {{ $u->last_seen_at ? \Carbon\Carbon::parse($u->last_seen_at)->format('H:i:s') : '—' }}
                 </span>
             </div>
         @empty
-            <div class="muted text-sm">Сейчас никого не видно онлайн.</div>
+            <div class="muted text-sm">
+                {{ __('dashboard.widgets.online_users.empty') }}
+            </div>
         @endforelse
     </div>
 </div>

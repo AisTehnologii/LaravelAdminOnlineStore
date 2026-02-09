@@ -15,23 +15,37 @@ use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Grouping\Group;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Str;
-
-use App\Filament\Resources\RelationManagers\RevisionsRelationManager;
-
 
 class BannerResource extends Resource
 {
     protected static ?string $model = Banner::class;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-photo';
-    protected static ?string $navigationGroup = 'Content';
-    protected static ?string $navigationLabel = 'Banners';
-    protected static ?int    $navigationSort  = 10;
+    protected static ?string $navigationIcon = 'heroicon-o-photo';
+    protected static ?int $navigationSort = 10;
 
     public static function shouldRegisterNavigation(): bool
     {
         return static::canViewAny();
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('nav.groups.content');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('banner.navigation_label');
+    }
+
+    public static function getPluralLabel(): ?string
+    {
+        return __('banner.navigation_label');
+    }
+
+    public static function getLabel(): ?string
+    {
+        return __('banner.navigation_label');
     }
 
     public static function form(Form $form): Form
@@ -39,7 +53,7 @@ class BannerResource extends Resource
         return $form->schema([
             Forms\Components\Grid::make(3)->schema([
                 Forms\Components\Select::make('section_id')
-                    ->label('Section')
+                    ->label(fn () => __('banner.fields.section'))
                     ->relationship(
                         name: 'section',
                         titleAttribute: 'title',
@@ -50,31 +64,56 @@ class BannerResource extends Resource
                     ->required()
                     ->createOptionForm([
                         Forms\Components\Hidden::make('type')->default('banner'),
-                        Forms\Components\TextInput::make('title')->required()->maxLength(255),
-                        Forms\Components\TextInput::make('slug')->required()->maxLength(255),
-                        Forms\Components\TextInput::make('position')->numeric()->default(1),
-                        Forms\Components\Toggle::make('is_active')->default(true),
+
+                        Forms\Components\TextInput::make('title')
+                            ->label(fn () => __('banner.fields.title'))
+                            ->required()
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('slug')
+                            ->label(fn () => __('banner.fields.slug'))
+                            ->required()
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('position')
+                            ->label(fn () => __('banner.fields.position'))
+                            ->numeric()
+                            ->default(1),
+
+                        Forms\Components\Toggle::make('is_active')
+                            ->label(fn () => __('banner.fields.is_active'))
+                            ->default(true),
                     ]),
 
                 Forms\Components\Select::make('locale')
-                    ->label('Locale')
-                    ->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română'])
+                    ->label(fn () => __('banner.fields.locale'))
+                    ->options([
+                        'en' => __('banner.locales.en'),
+                        'ru' => __('banner.locales.ru'),
+                        'ro' => __('banner.locales.ro'),
+                    ])
                     ->default('en')
                     ->required(),
 
                 Forms\Components\TextInput::make('position')
-                    ->label('Position')
+                    ->label(fn () => __('banner.fields.position'))
                     ->numeric()
                     ->default(1)
                     ->required(),
             ]),
 
-            Forms\Components\TextInput::make('title')->required()->maxLength(255),
+            Forms\Components\TextInput::make('title')
+                ->label(fn () => __('banner.fields.title'))
+                ->required()
+                ->maxLength(255),
 
-            Forms\Components\Textarea::make('text')->rows(3)->nullable(),
+            Forms\Components\Textarea::make('text')
+                ->label(fn () => __('banner.fields.text'))
+                ->rows(3)
+                ->nullable(),
 
             Forms\Components\FileUpload::make('image_path')
-                ->label('Image')
+                ->label(fn () => __('banner.fields.image'))
                 ->image()
                 ->directory('banners')
                 ->nullable(),
@@ -93,7 +132,7 @@ class BannerResource extends Resource
             )
             ->groups([
                 Group::make('section.title')
-                    ->label('Section')
+                    ->label(fn () => __('banner.fields.section'))
                     ->collapsible()
                     ->titlePrefixedWithLabel(false),
             ])
@@ -101,22 +140,22 @@ class BannerResource extends Resource
             ->defaultSort('position')
             ->headerActions([
                 Tables\Actions\Action::make('export')
-                    ->label('Экспорт данных')
+                    ->label(fn () => __('banner.export.action'))
                     ->icon('heroicon-o-arrow-down-tray')
-                    ->modalHeading('Экспорт данных')
+                    ->modalHeading(fn () => __('banner.export.modal_heading'))
                     ->form([
                         Forms\Components\Select::make('scope')
-                            ->label('Что экспортировать?')
+                            ->label(fn () => __('banner.export.scope'))
                             ->options([
-                                'all'     => 'Все секции',
-                                'section' => 'Только выбранную секцию',
+                                'all'     => __('banner.export.scope_all'),
+                                'section' => __('banner.export.scope_section'),
                             ])
                             ->default('all')
                             ->required()
                             ->live(),
 
                         Forms\Components\Select::make('section_id')
-                            ->label('Секция')
+                            ->label(fn () => __('banner.export.section'))
                             ->options(fn () => ContentSection::query()
                                 ->where('type', $type)
                                 ->orderBy('position')
@@ -127,21 +166,21 @@ class BannerResource extends Resource
                             ->searchable(),
 
                         Forms\Components\Select::make('format')
-                            ->label('Формат')
+                            ->label(fn () => __('banner.export.format'))
                             ->options([
-                                'pdf' => 'PDF',
-                                'xml' => 'XML',
+                                'pdf' => __('banner.export.pdf'),
+                                'xml' => __('banner.export.xml'),
                             ])
                             ->default('pdf')
                             ->required(),
                     ])
                     ->action(function (array $data, $livewire) use ($type) {
                         $columns = [
-                            'section.title' => 'Section',
-                            'locale'        => 'Locale',
-                            'position'      => 'Position',
-                            'title'         => 'Title',
-                            'updated_at'    => 'Updated at',
+                            'section.title' => __('banner.fields.section'),
+                            'locale'        => __('banner.fields.locale'),
+                            'position'      => __('banner.fields.position'),
+                            'title'         => __('banner.fields.title'),
+                            'updated_at'    => __('banner.fields.updated_at'),
                         ];
 
                         $query = method_exists($livewire, 'getFilteredTableQuery')
@@ -150,13 +189,13 @@ class BannerResource extends Resource
 
                         $query->with('section')->orderBy('section_id')->orderBy('position');
 
-                        if (($data['scope'] ?? 'all') === 'section' && !empty($data['section_id'])) {
+                        if (($data['scope'] ?? 'all') === 'section' && ! empty($data['section_id'])) {
                             $query->where('section_id', $data['section_id']);
                         }
 
                         $rows = $query->get();
 
-                        $title = 'Banners export';
+                        $title = __('banner.export.pdf_title');
                         $subtitle = now()->format('Y-m-d H:i');
 
                         if (($data['format'] ?? 'pdf') === 'xml') {
@@ -182,23 +221,46 @@ class BannerResource extends Resource
                     }),
             ])
             ->columns([
-                Tables\Columns\TextColumn::make('locale')->badge()->sortable(),
-                Tables\Columns\TextColumn::make('position')->sortable(),
-                Tables\Columns\ImageColumn::make('image_path')->square()->label('Image'),
-                Tables\Columns\TextColumn::make('title')->searchable()->limit(40),
-                Tables\Columns\TextColumn::make('updated_at')->dateTime('Y-m-d H:i')->sortable(),
+                Tables\Columns\TextColumn::make('locale')
+    ->label(fn () => __('banner.fields.locale'))
+    ->badge()
+    ->sortable(),
+
+Tables\Columns\TextColumn::make('position')
+    ->label(fn () => __('banner.fields.position'))
+    ->sortable(),
+
+
+                Tables\Columns\ImageColumn::make('image_path')
+                    ->square()
+                    ->label(fn () => __('banner.fields.image')),
+
+                Tables\Columns\TextColumn::make('title')
+                    ->label(fn () => __('banner.fields.title'))
+                    ->searchable()
+                    ->limit(40),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label(fn () => __('banner.fields.updated_at'))
+                    ->dateTime('Y-m-d H:i')
+                    ->sortable(),
             ])
             ->filters([
                 SelectFilter::make('section_id')
-                    ->label('Section')
+                    ->label(fn () => __('banner.fields.section'))
                     ->relationship(
                         name: 'section',
                         titleAttribute: 'title',
                         modifyQueryUsing: fn (Builder $query) => $query->where('type', $type)->orderBy('position')
                     ),
+
                 SelectFilter::make('locale')
-                    ->label('Locale')
-                    ->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română']),
+                    ->label(fn () => __('banner.fields.locale'))
+                    ->options([
+                        'en' => __('banner.locales.en'),
+                        'ru' => __('banner.locales.ru'),
+                        'ro' => __('banner.locales.ro'),
+                    ]),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -207,7 +269,6 @@ class BannerResource extends Resource
             ->bulkActions([Tables\Actions\DeleteBulkAction::make()]);
     }
 
-    
     public static function getPages(): array
     {
         return [

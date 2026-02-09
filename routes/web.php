@@ -25,6 +25,17 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\Coupon;
 use App\Support\Pricing;
 
+use App\Models\Order;
+use App\Models\OrderItem;
+
+use App\Http\Controllers\OneC\OneCExchangeController;
+
+Route::match(['GET','POST'], '/1c/exchange', [OneCExchangeController::class, 'handle']);
+
+// ✅ ловим /1c/exchange/getgoods, /1c/exchange/something и т.д.
+Route::match(['GET','POST'], '/1c/exchange/{tail}', [OneCExchangeController::class, 'handle'])
+    ->where('tail', '.*');
+
 
 /**
  * Поддерживаемые языки
@@ -34,7 +45,9 @@ $availableLocales = ['en', 'ru', 'ro'];
 /**
  * Переключение языка
  */
-Route::get('/set-locale/{locale}', function (string $locale) use ($availableLocales) {
+Route::get('/set-locale/{locale}', function (string $locale) {
+    $availableLocales = ['en', 'ru', 'ro'];
+
     if (!in_array($locale, $availableLocales, true)) {
         abort(404);
     }
@@ -44,7 +57,6 @@ Route::get('/set-locale/{locale}', function (string $locale) use ($availableLoca
 
     return back();
 })->name('set-locale');
-
 
 /**
  * HOME (/)
@@ -288,21 +300,24 @@ Route::middleware(['web', 'auth'])
 // =======================
 // CART (session-based)
 // =======================
+if (! function_exists('cart_recalc')) {
+    function cart_recalc(array $cart, ?array $coupon = null): array
+    {
+         $count = 0;
+        $sum   = 0.0;
 
-function cart_recalc(array $cart): array
-{
-    $count = 0;
-    $sum   = 0.0;
+        foreach ($cart as $row) {
+            $q = (int)($row['qty'] ?? 0);
+            $p = (float)($row['unit_price'] ?? 0);
+            $count += $q;
+            $sum   += $p * $q;
+        }
 
-    foreach ($cart as $row) {
-        $q = (int)($row['qty'] ?? 0);
-        $p = (float)($row['unit_price'] ?? 0);
-        $count += $q;
-        $sum   += $p * $q;
+        return [$count, $sum];
     }
-
-    return [$count, $sum];
 }
+
+
 
 Route::get('/cart', function () {
     $cart = session('cart', []);
@@ -434,10 +449,10 @@ Route::get('/cart/state', function () {
 
 
 
-
 Route::get('/products', function (Request $request) {
 
-    $locale = app()->getLocale();
+    $locale   = app()->getLocale();
+    $fallback = config('app.fallback_locale', 'ru');
 
     $catalogSectionId = ContentSection::query()
         ->where('slug', 'catalog')
@@ -461,23 +476,29 @@ Route::get('/products', function (Request $request) {
         ]);
     }
 
-    // База (все товары каталога)
+    // 1) база по текущей локали
     $base = Product::query()
-        ->where('locale', $locale)
         ->where('is_active', true)
         ->where('section_id', $catalogSectionId)
+        ->where('locale', $locale)
         ->with(['images' => fn($q) => $q->orderBy('position')]);
 
-    // ✅ Реальные min/max по базе (по всем товарам каталога)
+    // 2) если в текущей локали пусто — берём fallback (обычно ru)
+    if (!$base->clone()->exists() && $fallback && $fallback !== $locale) {
+        $base = Product::query()
+            ->where('is_active', true)
+            ->where('section_id', $catalogSectionId)
+            ->where('locale', $fallback)
+            ->with(['images' => fn($q) => $q->orderBy('position')]);
+    }
+
+    // min/max уже по правильной базе
     $minDb = (clone $base)->min(DB::raw('COALESCE(NULLIF(sale_price,0), price)')) ?? 0;
     $maxDb = (clone $base)->max(DB::raw('COALESCE(NULLIF(sale_price,0), price)')) ?? 0;
 
-    // ✅ По умолчанию показываем ВСЕ товары (без фильтра)
     $q = clone $base;
 
-    // ✅ Фильтр включается ТОЛЬКО если apply=1
     $apply = $request->query('apply') === '1';
-
     $appliedMin = null;
     $appliedMax = null;
 
@@ -485,7 +506,6 @@ Route::get('/products', function (Request $request) {
         $min = $request->filled('min') ? (float)$request->query('min') : null;
         $max = $request->filled('max') ? (float)$request->query('max') : null;
 
-        // защита: если пришли кривые значения — приводим к базе
         if ($min !== null) $min = max((float)$minDb, $min);
         if ($max !== null) $max = min((float)$maxDb, $max);
 
@@ -499,9 +519,8 @@ Route::get('/products', function (Request $request) {
         }
     }
 
-    // Сортировка
-    $sort = $request->query('sort', 'position'); // position | price | newest
-    $dir  = $request->query('dir', 'asc');       // asc | desc
+    $sort = $request->query('sort', 'position');
+    $dir  = $request->query('dir', 'asc');
     $dir  = in_array($dir, ['asc', 'desc']) ? $dir : 'asc';
 
     if ($sort === 'price') {
@@ -514,7 +533,6 @@ Route::get('/products', function (Request $request) {
 
     $products = $q->paginate(12)->withQueryString();
 
-    // Популярные (без фильтра по цене)
     $popularProducts = (clone $base)
         ->orderBy('position', 'asc')
         ->orderBy('id', 'desc')
@@ -534,6 +552,7 @@ Route::get('/products', function (Request $request) {
     ]);
 
 })->name('products.index');
+
 
 
 Route::get('/news', function (Request $request) {
@@ -1017,8 +1036,100 @@ Route::get('/admin-test', function () {
     return 'Admin test OK';
 });
 
+require __DIR__.'/auth.php';
 
 
+
+Route::post('/contact/send', function (Request $request) {
+    // TODO: обработка (mail/telegram/db)
+    return back()->with('success', 'Сообщение отправлено!');
+})->name('contact.send');
+
+
+Route::post('/checkout', function (Request $request) {
+
+    $cart = session('cart', []);
+    if (empty($cart)) {
+        return redirect('/cart')->with('error', 'Корзина пуста.');
+    }
+
+    [$itemsCount, $grandTotal] = cart_recalc($cart, session('coupon'));
+
+   DB::transaction(function () use ($cart, $grandTotal) {
+
+    // 1) Берём последний номер и блокируем строку/таблицу на время транзакции
+    $last = DB::table('orders')
+        ->select('number')
+        ->where('number', 'like', 'AA%')
+        ->orderByDesc('id')
+        ->lockForUpdate()
+        ->first();
+
+    $nextInt = 1;
+
+    if ($last && !empty($last->number)) {
+        // AA00000001 -> 1
+        $nextInt = (int) substr($last->number, 2) + 1;
+    }
+
+    $nextNumber = 'AA' . str_pad((string)$nextInt, 8, '0', STR_PAD_LEFT);
+
+    // 2) Создаём заказ
+    $order = Order::create([
+         'user_id' => auth()->id(),
+        'number'      => $nextNumber,
+        'ordered_at'  => now(),
+        'grand_total' => (float) $grandTotal,
+        'currency'    => 'MDL',
+        'status'      => 'new',
+        'raw'         => json_encode(['cart' => $cart], JSON_UNESCAPED_UNICODE),
+    ]);
+
+    // 3) Пишем items (цены!)
+   foreach ($cart as $row) {
+    $qty  = (float) ($row['qty'] ?? 0);
+    $unit = (float) ($row['unit_price'] ?? 0);
+
+    $order->items()->create([
+        'product_id'         => (int) ($row['product_id'] ?? 0),
+        'product_title'      => (string) ($row['title'] ?? ''), // ✅ ВОТ ЭТО ВАЖНО
+        'quantity'           => $qty,
+        'unit_amount'        => $unit,
+        'total_amount'       => round($unit * $qty, 2),
+        'raw'                => $row,
+    ]);
+}
+app(\App\Services\OneC\OrderCommerceMlExportService::class)->buildAndStore($order);
+
+});
+
+
+
+
+    // очищаем корзину (как ты хочешь)
+    session()->forget('cart');
+    // coupon можно оставить или убрать — чаще убирают:
+    // session()->forget('coupon');
+
+    return redirect('/cart')->with('success', 'Заказ создан!');
+
+})->name('checkout');
+
+
+
+
+
+Route::middleware('auth')->group(function () {
+    Route::get('/my-orders', function () {
+        $orders = \App\Models\Order::query()
+            ->where('user_id', auth()->id())
+            ->with(['items.product']) // ✅ подтягиваем Product для каждой позиции
+            ->orderByDesc('ordered_at')
+            ->paginate(10);
+
+        return view('front.my-orders', compact('orders'));
+    })->name('orders.index');
+});
 
 
 

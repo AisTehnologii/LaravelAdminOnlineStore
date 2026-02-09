@@ -1,40 +1,59 @@
 <?php
 
 namespace App\Filament\Resources;
+
+use App\Filament\Resources\CouponResource\Pages;
+use App\Models\Coupon;
+use Filament\Forms;
+use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Forms;
-use Filament\Forms\Form;
-use App\Models\Coupon;
-use App\Filament\Resources\CouponResource\Pages;
-
 
 class CouponResource extends Resource
 {
     protected static ?string $model = Coupon::class;
     protected static ?string $navigationIcon = 'heroicon-o-ticket';
 
-     // ✅ Группа в меню
-    protected static ?string $navigationGroup = 'Shop';
+    // ✅ Левое меню (группа + label) через lang
+    public static function getNavigationGroup(): ?string
+    {
+        return __('nav.groups.shop'); // SHOP / Магазин / Magazin
+    }
 
-    // (опционально) как будет называться пункт
-    protected static ?string $navigationLabel = 'Coupons';
+    public static function getNavigationLabel(): string
+    {
+        return __('coupon.page.nav_label');
+    }
+
+    public static function getPluralLabel(): ?string
+    {
+        return __('coupon.page.nav_label');
+    }
+
+    public static function getLabel(): ?string
+    {
+        return __('coupon.page.nav_label');
+    }
 
     public static function form(Form $form): Form
     {
         return $form->schema([
             Forms\Components\TextInput::make('code')
+                ->label(__('coupon.form.code'))
                 ->required()
                 ->unique(ignoreRecord: true),
 
             Forms\Components\TextInput::make('percent')
+                ->label(__('coupon.form.percent'))
                 ->numeric()
                 ->minValue(1)
                 ->maxValue(90)
                 ->required(),
 
-            Forms\Components\Toggle::make('is_active')->default(true),
+            Forms\Components\Toggle::make('is_active')
+                ->label(__('coupon.form.is_active'))
+                ->default(true),
         ]);
     }
 
@@ -42,10 +61,21 @@ class CouponResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('code')->searchable(),
-                Tables\Columns\TextColumn::make('percent')->suffix('%'),
-                Tables\Columns\IconColumn::make('is_active')->boolean(),
-                Tables\Columns\TextColumn::make('created_at')->dateTime(),
+                Tables\Columns\TextColumn::make('code')
+                    ->label(__('coupon.table.code'))
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('percent')
+                    ->label(__('coupon.table.percent'))
+                    ->suffix('%'),
+
+                Tables\Columns\IconColumn::make('is_active')
+                    ->label(__('coupon.table.is_active'))
+                    ->boolean(),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label(__('coupon.table.created_at'))
+                    ->dateTime('d.m.Y H:i'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -58,9 +88,9 @@ class CouponResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListCoupons::route('/'),
+            'index'  => Pages\ListCoupons::route('/'),
             'create' => Pages\CreateCoupon::route('/create'),
-            'edit' => Pages\EditCoupon::route('/{record}/edit'),
+            'edit'   => Pages\EditCoupon::route('/{record}/edit'),
         ];
     }
 }

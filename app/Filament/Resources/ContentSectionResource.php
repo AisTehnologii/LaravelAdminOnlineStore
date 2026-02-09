@@ -18,7 +18,6 @@ class ContentSectionResource extends Resource
     protected static ?string $model = ContentSection::class;
 
     protected static ?string $navigationIcon  = 'heroicon-o-rectangle-stack';
-    protected static ?string $navigationGroup = 'Content';
     protected static ?int    $navigationSort  = 1;
 
     public static function shouldRegisterNavigation(): bool
@@ -26,26 +25,69 @@ class ContentSectionResource extends Resource
         return static::canViewAny();
     }
 
+    // ✅ меню
+    public static function getNavigationGroup(): ?string
+    {
+        return __('nav.groups.content');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('content_section.page.nav_label');
+    }
+
+    public static function getLabel(): ?string
+    {
+        return __('content_section.page.nav_label');
+    }
+
+    public static function getPluralLabel(): ?string
+    {
+        return __('content_section.page.nav_label');
+    }
+
+    protected static function typeOptions(): array
+    {
+        return [
+            'banner'    => __('content_section.types.banner'),
+            'slider'    => __('content_section.types.slider'),
+            'card'      => __('content_section.types.card'),
+            'project'   => __('content_section.types.project'),
+            'quote'     => __('content_section.types.quote'),
+            'blog_card' => __('content_section.types.blog_card'),
+            'promo'     => __('content_section.types.promo'),
+            'catalog'   => __('content_section.types.catalog'),
+        ];
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([
             Forms\Components\Select::make('type')
+                ->label(__('content_section.form.type'))
                 ->required()
-                ->options([
-                    'banner'    => 'Banners',
-                    'slider'    => 'Sliders',
-                    'card'      => 'Cards',
-                    'project'   => 'Projects',
-                    'quote'     => 'Quotes',
-                    'blog_card' => 'Blog Cards',
-                    'promo'     => 'Promo Blocks',
-                    'catalog'   => 'Catalog', // ✅ ДОБАВИЛИ
-                ]),
+                ->options(static::typeOptions()),
 
-            Forms\Components\TextInput::make('title')->required()->maxLength(255),
-            Forms\Components\TextInput::make('slug')->required()->maxLength(255)->unique(ignoreRecord: true),
-            Forms\Components\TextInput::make('position')->numeric()->default(1)->required(),
-            Forms\Components\Toggle::make('is_active')->default(true),
+            Forms\Components\TextInput::make('title')
+                ->label(__('content_section.form.title'))
+                ->required()
+                ->maxLength(255),
+
+            Forms\Components\TextInput::make('slug')
+                ->label(__('content_section.form.slug'))
+                ->required()
+                ->maxLength(255)
+                ->unique(ignoreRecord: true),
+
+            Forms\Components\TextInput::make('position')
+                ->label(__('content_section.form.position'))
+                ->numeric()
+                ->default(1)
+                ->required(),
+
+            Forms\Components\Toggle::make('is_active')
+                ->label(__('content_section.form.is_active'))
+                ->default(true),
         ]);
     }
 
@@ -54,38 +96,32 @@ class ContentSectionResource extends Resource
         return $table
             ->headerActions([
                 Tables\Actions\Action::make('export')
-                    ->label('Экспорт данных')
+                    ->label(__('content_section.actions.export'))
                     ->icon('heroicon-o-arrow-down-tray')
-                    ->modalHeading('Экспорт данных')
+                    ->modalHeading(__('content_section.export.modal_heading'))
                     ->form([
                         Forms\Components\Select::make('scope')
-                            ->label('Что экспортировать?')
+                            ->label(__('content_section.export.scope'))
                             ->options([
-                                'all'  => 'Вся таблица (все типы)',
-                                'type' => 'Только выбранный тип',
+                                'all'  => __('content_section.export.scope_all'),
+                                'type' => __('content_section.export.scope_type'),
                             ])
                             ->default('all')
                             ->required()
                             ->live(),
 
                         Forms\Components\Select::make('type')
-                            ->label('Тип')
-                            ->options([
-                                'banner'    => 'Banners',
-                                'slider'    => 'Sliders',
-                                'card'      => 'Cards',
-                                'project'   => 'Projects',
-                                'quote'     => 'Quotes',
-                                'blog_card' => 'Blog Cards',
-                                'promo'     => 'Promo Blocks',
-                                'catalog'   => 'Catalog', // ✅ ДОБАВИЛИ
-                            ])
+                            ->label(__('content_section.export.type'))
+                            ->options(static::typeOptions())
                             ->visible(fn (callable $get) => $get('scope') === 'type')
                             ->required(fn (callable $get) => $get('scope') === 'type'),
 
                         Forms\Components\Select::make('format')
-                            ->label('Формат')
-                            ->options(['pdf' => 'PDF', 'xml' => 'XML'])
+                            ->label(__('content_section.export.format'))
+                            ->options([
+                                'pdf' => __('content_section.export.pdf'),
+                                'xml' => __('content_section.export.xml'),
+                            ])
                             ->default('pdf')
                             ->required(),
                     ])
@@ -103,13 +139,13 @@ class ContentSectionResource extends Resource
                             ? $livewire->getFilteredTableQuery()
                             : ContentSection::query();
 
-                        if (($data['scope'] ?? 'all') === 'type' && !empty($data['type'])) {
+                        if (($data['scope'] ?? 'all') === 'type' && ! empty($data['type'])) {
                             $query->where('type', $data['type']);
                         }
 
                         $rows = $query->orderBy('type')->orderBy('position')->get();
 
-                        $title = 'Content sections export';
+                        $title = __('content_section.export.title');
                         $subtitle = now()->format('Y-m-d H:i');
 
                         if (($data['format'] ?? 'pdf') === 'xml') {
@@ -117,7 +153,7 @@ class ContentSectionResource extends Resource
 
                             return response($xml, 200, [
                                 'Content-Type'        => 'application/xml; charset=UTF-8',
-                                'Content-Disposition' => 'attachment; filename="content_sections_' . now()->format('Ymd_His') . '.xml"',
+                                'Content-Disposition' => 'attachment; filename="' . __('content_section.export.file_name') . '_' . now()->format('Ymd_His') . '.xml"',
                             ]);
                         }
 
@@ -125,34 +161,43 @@ class ContentSectionResource extends Resource
 
                         return response()->streamDownload(
                             fn () => print($pdf->output()),
-                            'content_sections_' . now()->format('Ymd_His') . '.pdf'
+                            __('content_section.export.file_name') . '_' . now()->format('Ymd_His') . '.pdf'
                         );
                     }),
             ])
             ->columns([
-                Tables\Columns\TextColumn::make('type')->badge()->sortable(),
-                Tables\Columns\TextColumn::make('position')->sortable(),
-                Tables\Columns\TextColumn::make('title')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('slug')->searchable(),
-                Tables\Columns\IconColumn::make('is_active')->boolean()->sortable(),
+                Tables\Columns\TextColumn::make('type')
+                    ->label(__('content_section.table.type'))
+                    ->badge()
+                    ->sortable()
+                    ->formatStateUsing(fn ($state) => static::typeOptions()[$state] ?? $state),
+
+                Tables\Columns\TextColumn::make('position')
+                    ->label(__('content_section.table.position'))
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('title')
+                    ->label(__('content_section.table.title'))
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('slug')
+                    ->label(__('content_section.table.slug'))
+                    ->searchable(),
+
+                Tables\Columns\IconColumn::make('is_active')
+                    ->label(__('content_section.table.is_active'))
+                    ->boolean()
+                    ->sortable(),
             ])
             ->filters([
                 SelectFilter::make('type')
-                    ->label('Type')
-                    ->options([
-                        'banner'    => 'Banners',
-                        'slider'    => 'Sliders',
-                        'card'      => 'Cards',
-                        'project'   => 'Projects',
-                        'quote'     => 'Quotes',
-                        'blog_card' => 'Blog Cards',
-                        'promo'     => 'Promo Blocks',
-                        'catalog'   => 'Catalog', // ✅ ДОБАВИЛИ
-                    ]),
+                    ->label(__('content_section.filters.type'))
+                    ->options(static::typeOptions()),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
+                Tables\Actions\DeleteAction::make(),
             ]);
     }
 

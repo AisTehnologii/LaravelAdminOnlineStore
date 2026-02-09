@@ -5,7 +5,9 @@
 
         {{-- USERS --}}
         <div class="chat-card">
-            <div class="chat-title" style="margin-bottom:10px; opacity:.85;">Пользователи</div>
+            <div class="chat-title" style="margin-bottom:10px; opacity:.85;">
+                {{ __('chat.ui.users') }}
+            </div>
 
             <div class="chat-list">
                 @forelse($users as $user)
@@ -24,7 +26,7 @@
                                 <div class="chat-title" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                     {{ $user->name }}
                                 </div>
-                                <div class="chat-sub">Нажми чтобы начать чат</div>
+                                <div class="chat-sub">{{ __('chat.ui.start_chat') }}</div>
                             </div>
 
                             @if($uUnread > 0)
@@ -33,20 +35,22 @@
                         </div>
                     </button>
                 @empty
-                    <div class="chat-empty">Нет пользователей</div>
+                    <div class="chat-empty">{{ __('chat.ui.no_users') }}</div>
                 @endforelse
             </div>
         </div>
 
         {{-- CONVERSATIONS --}}
         <div class="chat-card">
-            <div class="chat-title" style="margin-bottom:10px; opacity:.85;">Диалоги</div>
+            <div class="chat-title" style="margin-bottom:10px; opacity:.85;">
+                {{ __('chat.ui.dialogs') }}
+            </div>
 
             <div class="chat-list">
                 @forelse($conversations as $c)
                     @php
                         $isActive = ($activeConversationId === $c->id);
-                        $title = $dialogTitles[$c->id] ?? ('Чат #'.$c->id);
+                        $title = $dialogTitles[$c->id] ?? __('chat.ui.chat_id', ['id' => $c->id]);
                         $unread = (int) ($unreadByConversation[$c->id] ?? 0);
                     @endphp
 
@@ -69,7 +73,7 @@
                         </div>
                     </button>
                 @empty
-                    <div class="chat-empty">Диалогов пока нет</div>
+                    <div class="chat-empty">{{ __('chat.ui.no_dialogs') }}</div>
                 @endforelse
             </div>
         </div>
@@ -82,9 +86,9 @@
         <div class="chat-header">
             <div class="chat-title" style="opacity:.85;">
                 @if($activeConversationId)
-                    {{ $activeTitle ?? ('Чат #'.$activeConversationId) }}
+                    {{ $activeTitle ?? __('chat.ui.chat_id', ['id' => $activeConversationId]) }}
                 @else
-                    Чат
+                    {{ __('chat.ui.chat') }}
                 @endif
             </div>
             <div class="chat-sub">{{ now()->format('d.m.Y H:i') }}</div>
@@ -92,7 +96,7 @@
 
         <div class="chat-messages" id="chatMessages">
             @if(! $activeConversationId)
-                <div class="chat-empty">Выбери пользователя или диалог слева 👈</div>
+                <div class="chat-empty">{{ __('chat.ui.select_left') }}</div>
             @else
                 @forelse($messages as $m)
                     @php
@@ -138,22 +142,20 @@
                                 </div>
                             @endif
 
-                            {{-- ✅ статус "Отправлено / Просмотрено" только для моих сообщений --}}
+                            {{-- ✅ статус только для моих сообщений --}}
                             @if($isMine)
                                 @php
-                                    // personal: показываем Просмотрено/Отправлено
-                                    // group: Просмотрено X/Y
                                     $isGroup = ($activeConversationType === 'group');
                                 @endphp
 
                                 <div style="margin-top:8px; font-size:12px; color: rgba(255,255,255,.55); text-align:right;">
                                     @if($isGroup && $rs)
-                                        Просмотрено {{ $rs['seenCount'] }}/{{ $rs['total'] }}
+                                        {{ __('chat.ui.seen_x_y', ['seen' => $rs['seenCount'], 'total' => $rs['total']]) }}
                                     @else
-                                        @if($rs && $rs['seen'])
-                                            Просмотрено
+                                        @if($rs && ($rs['seen'] ?? false))
+                                            {{ __('chat.ui.seen') }}
                                         @else
-                                            Отправлено
+                                            {{ __('chat.ui.sent') }}
                                         @endif
                                     @endif
                                 </div>
@@ -161,7 +163,7 @@
                         </div>
                     </div>
                 @empty
-                    <div class="chat-empty">Сообщений пока нет — напиши первым 🙂</div>
+                    <div class="chat-empty">{{ __('chat.ui.no_messages') }}</div>
                 @endforelse
             @endif
         </div>
@@ -199,7 +201,7 @@
                 wire:model.defer="newMessage"
                 class="chat-input"
                 rows="1"
-                placeholder="Сообщение…"
+                placeholder="{{ __('chat.ui.message_placeholder') }}"
                 @disabled(! $activeConversationId)
                 data-chat-input="1"
             ></textarea>
@@ -210,7 +212,7 @@
                 @disabled(! $activeConversationId)
                 type="button"
             >
-                Отправить
+                {{ __('chat.ui.send') }}
             </button>
         </div>
 

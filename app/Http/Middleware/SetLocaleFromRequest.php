@@ -12,21 +12,29 @@ class SetLocaleFromRequest
 
     public function handle(Request $request, Closure $next): Response
     {
-        $locale = session('locale');
+        // 1) Если передали ?lang=xx — используем его
+        $locale = $request->query('lang');
 
-        if ($request->has('lang')) {
-            $locale = $request->get('lang');
-        }
-
+        // 2) Иначе — берем из session
         if (! $locale) {
-            $locale = 'en';
+            $locale = session('locale');
         }
 
+        // 3) Если всё равно пусто — дефолт из конфига
+        if (! $locale) {
+            $locale = config('app.locale', 'en');
+        }
+
+        // 4) Валидация
         if (! in_array($locale, $this->availableLocales, true)) {
-            $locale = 'en';
+            $locale = config('app.locale', 'en');
         }
 
-        session(['locale' => $locale]);
+        // 5) Сохраняем только если изменился (чтобы не дергать session лишний раз)
+        if (session('locale') !== $locale) {
+            session(['locale' => $locale]);
+        }
+
         app()->setLocale($locale);
 
         return $next($request);

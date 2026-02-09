@@ -3,7 +3,7 @@
         {{ $this->form }}
 
         <x-filament::button type="submit" color="warning" icon="heroicon-o-check">
-            Сохранить
+            {{ __('maintenance.actions.save') }}
         </x-filament::button>
     </form>
 </x-filament-panels::page>

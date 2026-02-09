@@ -42,7 +42,8 @@
 
             <div class="col-lg-8 col-sm-8 col-xs-12">
                 {{-- пока без логики отправки — чистая верстка --}}
-                <form id="contact" class="form" method="post" action="#">
+                <form id="contact" class="form" method="GET" action="#">
+
                     @csrf
                     <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12">
                         <input type="text" name="name" placeholder="ИМЯ"/>

@@ -25,10 +25,13 @@ class AppServiceProvider extends ServiceProvider
     {
          View::composer('*', function ($view) {
         $view->with('activeCoupon', session('coupon')); // ['code'=>..., 'percent'=>...]
+
+        app()->setLocale(session('locale', config('app.locale')));
+         $this->app->useLangPath(base_path('lang'));
     });
   
-    if (app()->environment('local')) {
-        URL::forceScheme('https');
-    }
+    // if (app()->environment('local')) {
+    //     URL::forceScheme('https');
+    // }
     }
 }

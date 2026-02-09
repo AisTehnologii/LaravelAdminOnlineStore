@@ -20,10 +20,29 @@ class SliderResource extends Resource
 {
     protected static ?string $model = Slider::class;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-squares-2x2';
-    protected static ?string $navigationGroup = 'Content';
-    protected static ?string $navigationLabel = 'Sliders';
-    protected static ?int    $navigationSort  = 20;
+    protected static ?string $navigationIcon = 'heroicon-o-squares-2x2';
+    protected static ?int $navigationSort = 20;
+
+    // ✅ меню (единый Контент)
+    public static function getNavigationGroup(): ?string
+    {
+        return __('nav.groups.content');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('slider.page.nav_label');
+    }
+
+    public static function getLabel(): ?string
+    {
+        return __('slider.page.nav_label');
+    }
+
+    public static function getPluralLabel(): ?string
+    {
+        return __('slider.page.nav_label');
+    }
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -35,7 +54,7 @@ class SliderResource extends Resource
         return $form->schema([
             Forms\Components\Grid::make(3)->schema([
                 Forms\Components\Select::make('section_id')
-                    ->label('Section')
+                    ->label(__('slider.form.section'))
                     ->relationship(
                         name: 'section',
                         titleAttribute: 'title',
@@ -53,20 +72,20 @@ class SliderResource extends Resource
                     ]),
 
                 Forms\Components\Select::make('locale')
-                    ->label('Locale')
+                    ->label(__('slider.form.locale'))
                     ->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română'])
                     ->default('en')
                     ->required(),
 
                 Forms\Components\TextInput::make('position')
-                    ->label('Position')
+                    ->label(__('slider.form.position'))
                     ->numeric()
                     ->default(1)
                     ->required(),
             ]),
 
             Forms\Components\FileUpload::make('image_path')
-                ->label('Image')
+                ->label(__('slider.form.image'))
                 ->image()
                 ->directory('sliders')
                 ->required(),
@@ -80,40 +99,56 @@ class SliderResource extends Resource
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query->with('section')->orderBy('section_id')->orderBy('position'))
             ->groups([
-                Group::make('section.title')->label('Section')->collapsible()->titlePrefixedWithLabel(false),
+                Group::make('section.title')
+                    ->label(__('slider.form.section'))
+                    ->collapsible()
+                    ->titlePrefixedWithLabel(false),
             ])
             ->defaultGroup('section.title')
             ->defaultSort('position')
             ->headerActions([
                 Tables\Actions\Action::make('export')
-                    ->label('Экспорт данных')
+                    ->label(__('slider.export.action'))
                     ->icon('heroicon-o-arrow-down-tray')
-                    ->modalHeading('Экспорт данных')
+                    ->modalHeading(__('slider.export.heading'))
                     ->form([
                         Forms\Components\Select::make('scope')
-                            ->label('Что экспортировать?')
-                            ->options(['all' => 'Все секции', 'section' => 'Только выбранную секцию'])
+                            ->label(__('slider.export.scope'))
+                            ->options([
+                                'all'     => __('slider.export.scope_all'),
+                                'section' => __('slider.export.scope_section'),
+                            ])
                             ->default('all')
                             ->required()
                             ->live(),
+
                         Forms\Components\Select::make('section_id')
-                            ->label('Секция')
-                            ->options(fn () => ContentSection::query()->where('type', $type)->orderBy('position')->pluck('title', 'id')->toArray())
+                            ->label(__('slider.export.section'))
+                            ->options(fn () => ContentSection::query()
+                                ->where('type', $type)
+                                ->orderBy('position')
+                                ->pluck('title', 'id')
+                                ->toArray()
+                            )
                             ->visible(fn (callable $get) => $get('scope') === 'section')
                             ->searchable(),
+
                         Forms\Components\Select::make('format')
-                            ->label('Формат')
-                            ->options(['pdf' => 'PDF', 'xml' => 'XML'])
+                            ->label(__('slider.export.format'))
+                            ->options([
+                                'pdf' => __('slider.export.pdf'),
+                                'xml' => __('slider.export.xml'),
+                            ])
                             ->default('pdf')
                             ->required(),
                     ])
                     ->action(function (array $data, $livewire) {
                         $columns = [
-                            'section.title' => 'Section',
-                            'locale'        => 'Locale',
-                            'position'      => 'Position',
-                            'image_path'    => 'Image',
-                            'updated_at'    => 'Updated at',
+                            'section.title' => __('slider.export.columns.section'),
+                            'locale'        => __('slider.export.columns.locale'),
+                            'position'      => __('slider.export.columns.position'),
+                            'image_path'    => __('slider.export.columns.image'),
+                            'updated_at'    => __('slider.export.columns.updated'),
                         ];
 
                         $query = method_exists($livewire, 'getFilteredTableQuery')
@@ -122,13 +157,14 @@ class SliderResource extends Resource
 
                         $query->with('section')->orderBy('section_id')->orderBy('position');
 
-                        if (($data['scope'] ?? 'all') === 'section' && !empty($data['section_id'])) {
+                        if (($data['scope'] ?? 'all') === 'section' && ! empty($data['section_id'])) {
                             $query->where('section_id', $data['section_id']);
                         }
 
                         $rows = $query->get();
-                        $title = 'Sliders export';
-                        $subtitle = now()->format('Y-m-d H:i');
+
+                        $title = __('slider.export.title');
+                        $subtitle = now()->format(__('slider.export.subtitle_fmt'));
 
                         if (($data['format'] ?? 'pdf') === 'xml') {
                             $xml = TableExport::toXml('export', 'row', $columns, $rows);
@@ -148,23 +184,44 @@ class SliderResource extends Resource
                     }),
             ])
             ->columns([
-                Tables\Columns\TextColumn::make('locale')->badge()->sortable(),
-                Tables\Columns\TextColumn::make('position')->sortable(),
-                Tables\Columns\ImageColumn::make('image_path')->square(),
-                Tables\Columns\TextColumn::make('updated_at')->dateTime('Y-m-d H:i')->sortable(),
+                Tables\Columns\TextColumn::make('locale')
+                    ->label(__('slider.table.locale'))
+                    ->badge()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('position')
+                    ->label(__('slider.table.position'))
+                    ->sortable(),
+
+                Tables\Columns\ImageColumn::make('image_path')
+                    ->label(__('slider.table.image'))
+                    ->square(),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label(__('slider.table.updated_at'))
+                    ->dateTime('Y-m-d H:i')
+                    ->sortable(),
             ])
             ->filters([
                 SelectFilter::make('section_id')
-                    ->label('Section')
+                    ->label(__('slider.filters.section'))
                     ->relationship(
                         name: 'section',
                         titleAttribute: 'title',
                         modifyQueryUsing: fn (Builder $query) => $query->where('type', $type)->orderBy('position')
                     ),
-                SelectFilter::make('locale')->label('Locale')->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română']),
+
+                SelectFilter::make('locale')
+                    ->label(__('slider.filters.locale'))
+                    ->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română']),
             ])
-            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()])
-            ->bulkActions([Tables\Actions\DeleteBulkAction::make()]);
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\DeleteBulkAction::make(),
+            ]);
     }
 
     public static function getPages(): array

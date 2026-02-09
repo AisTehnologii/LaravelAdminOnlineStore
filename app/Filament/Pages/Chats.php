@@ -8,8 +8,9 @@ use Illuminate\Support\Facades\DB;
 class Chats extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-chat-bubble-left-right';
-    protected static ?string $navigationGroup = 'Communication';
-    protected static ?string $navigationLabel = 'Chats';
+    protected static ?string $navigationGroup = null;
+    protected static ?string $navigationLabel = null;
+
     protected static string $view = 'filament.pages.chats';
 
     public static function shouldRegisterNavigation(): bool
@@ -22,6 +23,21 @@ class Chats extends Page
         return auth()->check();
     }
 
+    public static function getNavigationGroup(): ?string
+    {
+        return __('chat.page.nav_group');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('chat.page.nav_label');
+    }
+
+    public function getTitle(): string
+    {
+        return __('chat.page.title');
+    }
+
     public static function getNavigationBadge(): ?string
     {
         $u = auth()->user();
@@ -29,7 +45,6 @@ class Chats extends Page
             return null;
         }
 
-        // Кол-во непрочитанных сообщений во всех диалогах пользователя
         $count = DB::table('conversation_participants as cp')
             ->join('messages as m', 'm.conversation_id', '=', 'cp.conversation_id')
             ->where('cp.user_id', $u->id)
@@ -37,16 +52,16 @@ class Chats extends Page
             ->whereColumn('m.created_at', '>', DB::raw("COALESCE(cp.last_read_at, '1970-01-01 00:00:00')"))
             ->count();
 
-        return $count > 0 ? (string) $count : null; // null => бейдж скрыт
+        return $count > 0 ? (string) $count : null;
     }
 
     public static function getNavigationBadgeColor(): ?string
     {
-        return 'warning'; // жёлтый
+        return 'warning';
     }
 
     public static function getNavigationBadgeTooltip(): ?string
     {
-        return 'Непрочитанные сообщения';
+        return __('chat.page.badge_tooltip');
     }
 }

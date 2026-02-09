@@ -10,8 +10,10 @@ use Spatie\Permission\Traits\HasRoles;
 use Filament\Panel;
 use App\Support\HasRevisions;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Filament\Models\Contracts\FilamentUser;
 
-class User extends Authenticatable
+
+class User extends Authenticatable implements FilamentUser
 {
     use HasFactory, Notifiable, HasRoles;
      use SoftDeletes,HasRevisions;
@@ -37,9 +39,9 @@ class User extends Authenticatable
         ];
     }
 
-    public function canAccessPanel(Panel $panel): bool
-    {
-        // В админку пускаем главного админа или пользователей с ролями
-        return $this->is_admin || $this->hasAnyRole(['admin', 'content-maker']);
-    }
+     public function canAccessPanel(Panel $panel): bool
+{
+    return true;
+}
+
 }

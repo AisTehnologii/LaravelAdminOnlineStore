@@ -9,22 +9,10 @@ class Product extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = [
-        'section_id',
-        'locale',
-        'position',
-        'is_active',
-        'announce_title',
-        'announce_description',
-        'announce_image_path',
-        'title',
-        'description',
-        'description_extra',
-        'price',
-        'sale_price',
-    ];
+    protected $guarded = [];
 
     protected $casts = [
+        'onec_raw' => 'array',
         'is_active' => 'boolean',
         'price' => 'decimal:2',
         'sale_price' => 'decimal:2',
@@ -32,25 +20,11 @@ class Product extends Model
 
     public function section()
     {
-        return $this->belongsTo(ContentSection::class, 'section_id');
+        return $this->belongsTo(\App\Models\ContentSection::class, 'section_id');
     }
 
     public function images()
     {
-        return $this->hasMany(ProductImage::class)->orderBy('position');
-    }
-
-    public function getDisplayPriceAttribute(): ?string
-    {
-        $p = $this->sale_price ?? $this->price;
-        return $p === null ? null : number_format((float) $p, 2, '.', ' ');
-    }
-
-    public function getDisplayOldPriceAttribute(): ?string
-    {
-        if ($this->sale_price !== null && $this->price !== null && $this->price > $this->sale_price) {
-            return number_format((float) $this->price, 2, '.', ' ');
-        }
-        return null;
+        return $this->hasMany(\App\Models\ProductImage::class, 'product_id')->orderBy('position');
     }
 }

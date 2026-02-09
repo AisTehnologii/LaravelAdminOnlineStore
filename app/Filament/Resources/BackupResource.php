@@ -7,20 +7,14 @@ use App\Models\Backup;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Auth;
 
 class BackupResource extends Resource
 {
     protected static ?string $model = Backup::class;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-archive-box';
-    protected static ?string $navigationGroup = 'Access';
-    protected static ?string $navigationLabel = 'Backups';
+    protected static ?string $navigationIcon = 'heroicon-o-archive-box';
     protected static ?int $navigationSort = 30;
 
-    /**
-     * ✅ ЕДИНАЯ ТОЧКА ДОСТУПА
-     */
     public static function canAccess(): bool
     {
         return (bool) auth()->user()?->is_admin;
@@ -41,33 +35,53 @@ class BackupResource extends Resource
         return static::canAccess();
     }
 
+    public static function getNavigationGroup(): ?string
+    {
+        return __('nav.groups.access');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('backup.navigation_label');
+    }
+
+    public static function getPluralLabel(): ?string
+    {
+        return __('backup.navigation_label');
+    }
+
+    public static function getLabel(): ?string
+    {
+        return __('backup.navigation_label');
+    }
+
     public static function table(Table $table): Table
     {
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Backup')
+                    ->label(fn () => __('backup.fields.name'))
                     ->searchable()
                     ->weight('bold')
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make('size_human')
-                    ->label('Size')
+                    ->label(fn () => __('backup.fields.size'))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('user.name')
-                    ->label('By')
+                    ->label(fn () => __('backup.fields.by'))
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Created')
+                    ->label(fn () => __('backup.fields.created'))
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
             ])
             ->actions([
                 Tables\Actions\Action::make('download')
-                    ->label('Скачать')
+                    ->label(fn () => __('backup.actions.download'))
                     ->icon('heroicon-o-arrow-down-tray')
                     ->url(fn (Backup $record) => route('backups.download', $record))
                     ->visible(fn () => static::canAccess())

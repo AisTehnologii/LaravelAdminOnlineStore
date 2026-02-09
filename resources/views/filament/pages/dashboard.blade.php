@@ -3,9 +3,9 @@
         $u = auth()->user();
         $name = $u?->name ?? 'User';
         $email = $u?->email ?? null;
+
         $roles = method_exists($u, 'getRoleNames') ? $u->getRoleNames() : collect();
         $roleText = $roles->isNotEmpty() ? $roles->implode(', ') : '—';
-        $now = now()->format('d.m.Y H:i');
 
         $urlChats    = url('/admin/chats');
         $urlTasks    = url('/admin/tasks');
@@ -19,112 +19,134 @@
         $urlHistory  = url('/admin/revisions'); // у тебя так
     @endphp
 
-    <style>
-        .dash-shell { max-width: 1200px; }
+<style>
+    .dash-shell { max-width: 1200px; }
 
-        .dash-section { border-radius: 22px !important; padding: 22px !important; }
-        .dash-card    { border-radius: 18px !important; padding: 18px !important; }
-        .dash-mini    { border-radius: 16px !important; padding: 14px !important; }
+    .dash-section { border-radius: 22px !important; padding: 22px !important; }
+    .dash-card    { border-radius: 18px !important; padding: 18px !important; }
+    .dash-mini    { border-radius: 16px !important; padding: 14px !important; }
 
-        .glass {
-            background: rgba(255,255,255,.06) !important;
-            border: 1px solid rgba(255,255,255,.10) !important;
-            backdrop-filter: blur(10px) !important;
-        }
-        .glass-2 {
-            background: rgba(0,0,0,.20) !important;
-            border: 1px solid rgba(255,255,255,.10) !important;
-        }
-        .soft-shadow { box-shadow: 0 12px 30px rgba(0,0,0,.28) !important; }
+    /* ====== БЛОКИ: как раньше ====== */
+    .glass {
+        background: rgba(255,255,255,.06) !important;
+        border: 1px solid rgba(255,255,255,.10) !important;
+        backdrop-filter: blur(10px) !important;
+    }
+    .glass-2 {
+        background: rgba(0,0,0,.20) !important;
+        border: 1px solid rgba(255,255,255,.10) !important;
+    }
+    .soft-shadow { box-shadow: 0 12px 30px rgba(0,0,0,.28) !important; }
 
-        .accent-line {
-            background: linear-gradient(90deg, rgba(245,158,11,.65), rgba(245,158,11,.10), rgba(255,255,255,.05));
-            height: 1px;
-            margin: 10px !important;
-        }
+    .accent-line {
+        background: linear-gradient(90deg, rgba(245,158,11,.65), rgba(245,158,11,.10), rgba(255,255,255,.05));
+        height: 1px;
+        margin: 10px !important;
+    }
 
-        .dash-card { margin-top: 20px !important; }
+    .dash-card { margin-top: 20px !important; }
 
-        .dash-btn {
-            border-radius: 14px !important;
-            padding: 10px 14px !important;
-            border: 1px solid rgba(255,255,255,.12) !important;
-            background: rgba(0,0,0,.22) !important;
-            color: rgba(255,255,255,.92) !important;
-            transition: transform .15s ease, background .15s ease, border-color .15s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            font-size: 14px;
-            line-height: 1;
-            white-space: nowrap;
-        }
-        .dash-btn:hover {
-            background: rgba(255,255,255,.07) !important;
-            border-color: rgba(255,255,255,.18) !important;
-            transform: translateY(-1px);
-        }
-        .dash-btn-amber {
-            border-color: rgba(245,158,11,.35) !important;
-            background: rgba(245,158,11,.14) !important;
-        }
-        .dash-btn-amber:hover {
-            background: rgba(245,158,11,.18) !important;
-            border-color: rgba(245,158,11,.55) !important;
-        }
+    .dash-btn {
+        border-radius: 14px !important;
+        padding: 10px 14px !important;
+        border: 1px solid rgba(255,255,255,.12) !important;
+        background: rgba(0,0,0,.22) !important;
+        transition: transform .15s ease, background .15s ease, border-color .15s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 14px;
+        line-height: 1;
+        white-space: nowrap;
+    }
+    .dash-btn:hover {
+        background: rgba(255,255,255,.07) !important;
+        border-color: rgba(255,255,255,.18) !important;
+        transform: translateY(-1px);
+    }
+    .dash-btn-amber {
+        border-color: rgba(245,158,11,.35) !important;
+        background: rgba(245,158,11,.14) !important;
+    }
+    .dash-btn-amber:hover {
+        background: rgba(245,158,11,.18) !important;
+        border-color: rgba(245,158,11,.55) !important;
+    }
 
-        .dash-pill {
-            border-radius: 999px !important;
-            padding: 6px 10px !important;
-            border: 1px solid rgba(255,255,255,.12) !important;
-            background: rgba(0,0,0,.22) !important;
-            color: rgba(255,255,255,.75) !important;
-            font-size: 12px;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .dash-pill-amber {
-            border-color: rgba(245,158,11,.30) !important;
-            background: rgba(245,158,11,.12) !important;
-            color: rgba(255,241,214,.95) !important;
-        }
+    .dash-pill {
+        border-radius: 999px !important;
+        padding: 6px 10px !important;
+        border: 1px solid rgba(255,255,255,.12) !important;
+        background: rgba(0,0,0,.22) !important;
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .dash-pill-amber {
+        border-color: rgba(245,158,11,.30) !important;
+        background: rgba(245,158,11,.12) !important;
+    }
 
-        .dash-hover {
-            transition: border-color .15s ease, background .15s ease, transform .15s ease;
-        }
-        .dash-hover:hover {
-            background: rgba(255,255,255,.05) !important;
-            border-color: rgba(245,158,11,.20) !important;
-            transform: translateY(-1px);
-        }
+    .dash-hover {
+        transition: border-color .15s ease, background .15s ease, transform .15s ease;
+    }
+    .dash-hover:hover {
+        background: rgba(255,255,255,.05) !important;
+        border-color: rgba(245,158,11,.20) !important;
+        transform: translateY(-1px);
+    }
 
-        .muted  { color: rgba(255,255,255,.62) !important; }
-        .muted2 { color: rgba(255,255,255,.45) !important; }
-        .h-title { letter-spacing: .2px; }
-        .section-title { font-weight: 700; color: rgba(255,255,255,.92) !important; }
-        .sub-title { color: rgba(255,255,255,.62) !important; }
+    .h-title { letter-spacing: .2px; }
 
-        /* раскрывашка */
-        .dash-expand { cursor: pointer; }
-        .dash-chevron {
-            transition: transform .15s ease;
-            opacity: .85;
-        }
-        .dash-chevron.is-open { transform: rotate(90deg); }
-        .dash-help {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid rgba(255,255,255,.08);
-        }
-        .dash-help ul {
-            margin-top: 8px;
-            padding-left: 16px;
-            list-style: disc;
-        }
-        .dash-help li { margin: 4px 0; color: rgba(255,255,255,.72); font-size: 13px; line-height: 1.35; }
-    </style>
+    /* TEXT adaptive */
+    .dash-shell .section-title { font-weight: 700; color: rgba(0,0,0,.92) !important; }
+    .dash-shell .sub-title     { color: rgba(0,0,0,.62) !important; }
+    .dash-shell .muted         { color: rgba(0,0,0,.62) !important; }
+    .dash-shell .muted2        { color: rgba(0,0,0,.45) !important; }
+
+    .dash-shell .dash-btn,
+    .dash-shell .dash-pill {
+        color: rgba(0,0,0,.88) !important;
+    }
+
+    html.dark .dash-shell .section-title { color: rgba(255,255,255,.92) !important; }
+    html.dark .dash-shell .sub-title     { color: rgba(255,255,255,.62) !important; }
+    html.dark .dash-shell .muted         { color: rgba(255,255,255,.62) !important; }
+    html.dark .dash-shell .muted2        { color: rgba(255,255,255,.45) !important; }
+
+    html.dark .dash-shell .dash-btn,
+    html.dark .dash-shell .dash-pill {
+        color: rgba(255,255,255,.92) !important;
+    }
+
+    .dash-expand { cursor: pointer; }
+    .dash-chevron {
+        transition: transform .15s ease;
+        opacity: .85;
+    }
+    .dash-chevron.is-open { transform: rotate(90deg); }
+    .dash-help {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255,255,255,.08);
+    }
+    html:not(.dark) .dash-help { border-top-color: rgba(0,0,0,.10) !important; }
+
+    .dash-help ul {
+        margin-top: 8px;
+        padding-left: 16px;
+        list-style: disc;
+    }
+    .dash-help li {
+        margin: 4px 0;
+        font-size: 13px;
+        line-height: 1.35;
+        color: rgba(0,0,0,.72) !important;
+    }
+    html.dark .dash-help li { color: rgba(255,255,255,.72) !important; }
+</style>
 
     <div class="dash-shell space-y-6">
 
@@ -134,26 +156,35 @@
 
                 <div class="space-y-3">
                     <div class="text-2xl md:text-3xl font-semibold text-white/95 h-title">
-                        Добро пожаловать, <span class="text-amber-300">{{ $name }}</span> 👋
+                        {!! __('dashboard.hero.welcome', [
+                            'name' => '<span class="text-amber-300">'.e($name).'</span>'
+                        ]) !!}
                     </div>
 
                     <div class="muted text-sm leading-relaxed max-w-[70ch]">
-                        Это административная панель сайта. Здесь ты управляешь контентом, пользователями, ролями,
-                        общением (чат) и задачами команды.
+                        {{ __('dashboard.hero.intro') }}
                     </div>
 
                     <div class="flex flex-wrap gap-2 pt-1">
-                        <span class="dash-pill">🕒 {{ $now }}</span>
                         @if($email)
-                            <span class="dash-pill">✉️ {{ $email }}</span>
+                            <span class="dash-pill">
+                                {{ __('dashboard.hero.email', ['email' => $email]) }}
+                            </span>
                         @endif
-                        <span class="dash-pill dash-pill-amber">🛡 Роль: {{ $roleText }}</span>
+
+                        <span class="dash-pill dash-pill-amber">
+                            {{ __('dashboard.hero.role', ['role' => $roleText]) }}
+                        </span>
                     </div>
                 </div>
 
                 <div class="flex flex-wrap gap-2 md:justify-end">
-                    <a href="{{ $urlChats }}" class="dash-btn dash-btn-amber">💬 Открыть чат</a>
-                    <a href="{{ $urlTasks }}" class="dash-btn">✅ Открыть задачи</a>
+                    <a href="{{ $urlChats }}" class="dash-btn dash-btn-amber">
+                        {{ __('dashboard.hero.actions.open_chat') }}
+                    </a>
+                    <a href="{{ $urlTasks }}" class="dash-btn">
+                        {{ __('dashboard.hero.actions.open_tasks') }}
+                    </a>
                 </div>
 
             </div>
@@ -162,23 +193,30 @@
 
             <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div class="glass-2 dash-mini">
-                    <div class="text-xs muted2 uppercase tracking-wide">Подсказка</div>
+                    <div class="text-xs muted2 uppercase tracking-wide">{{ __('dashboard.hero.cards.hint.title') }}</div>
                     <div class="mt-1 text-sm text-white/85">
-                        Начни с <span class="text-amber-200">Content blocks</span> — там основные тексты сайта.
+                        {!! __('dashboard.hero.cards.hint.text', [
+                            'blocks' => '<span class="text-amber-200">Content blocks</span>'
+                        ]) !!}
                     </div>
                 </div>
 
                 <div class="glass-2 dash-mini">
-                    <div class="text-xs muted2 uppercase tracking-wide">Команда</div>
+                    <div class="text-xs muted2 uppercase tracking-wide">{{ __('dashboard.hero.cards.team.title') }}</div>
                     <div class="mt-1 text-sm text-white/85">
-                        Для вопросов — <span class="text-amber-200">Chats</span>, для задач — <span class="text-amber-200">Tasks</span>.
+                        {!! __('dashboard.hero.cards.team.text', [
+                            'chats' => '<span class="text-amber-200">Chats</span>',
+                            'tasks' => '<span class="text-amber-200">Tasks</span>',
+                        ]) !!}
                     </div>
                 </div>
 
                 <div class="glass-2 dash-mini">
-                    <div class="text-xs muted2 uppercase tracking-wide">Права</div>
+                    <div class="text-xs muted2 uppercase tracking-wide">{{ __('dashboard.hero.cards.permissions.title') }}</div>
                     <div class="mt-1 text-sm text-white/85">
-                        Роли и доступы настраиваются в <span class="text-amber-200">Roles</span> (Shield).
+                        {!! __('dashboard.hero.cards.permissions.text', [
+                            'roles' => '<span class="text-amber-200">Roles</span>',
+                        ]) !!}
                     </div>
                 </div>
             </div>
@@ -188,10 +226,10 @@
         <div class="glass dash-section dash-pad">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <div class="section-title text-lg">Сводка</div>
-                    <div class="sub-title text-sm mt-1">Задачи, непрочитанные, онлайн и последние действия.</div>
+                    <div class="section-title text-lg">{{ __('dashboard.widgets.title') }}</div>
+                    <div class="sub-title text-sm mt-1">{{ __('dashboard.widgets.subtitle') }}</div>
                 </div>
-                <span class="dash-pill">📌 Live</span>
+                <span class="dash-pill">{{ __('dashboard.widgets.live') }}</span>
             </div>
 
             <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -202,131 +240,127 @@
             </div>
         </div>
 
-        {{-- QUICK START (раскрываемые инструкции) --}}
+        {{-- QUICK START --}}
         <div class="glass dash-section dash-pad">
             <div>
-                <div class="section-title text-lg">Быстрый старт</div>
-                <div class="sub-title text-sm mt-1">Кликни на карточку — раскроется подробная инструкция.</div>
+                <div class="section-title text-lg">{{ __('dashboard.quick.title') }}</div>
+                <div class="sub-title text-sm mt-1">{{ __('dashboard.quick.subtitle') }}</div>
             </div>
 
             <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                {{-- CARD: Content blocks --}}
-                <div
-                    class="glass-2 dash-card dash-hover dash-expand"
-                    x-data="{ open: false }"
-                    @click="open = !open"
+                {{-- Content blocks --}}
+                <div class="glass-2 dash-card dash-hover dash-expand"
+                     x-data="{ open: false }"
+                     @click="open = !open"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <div class="text-sm font-semibold text-white/90 flex items-center gap-2">
-                                📝 Обновить тексты сайта
+                                {{ __('dashboard.quick.cards.blocks.title') }}
                                 <span class="dash-chevron" :class="{ 'is-open': open }">›</span>
                             </div>
                             <div class="muted text-sm mt-1 leading-relaxed">
-                                Открой <span class="text-amber-200">Content blocks</span> и меняй тексты (HTML поддерживается).
+                                {!! __('dashboard.quick.cards.blocks.desc', [
+                                    'blocks' => '<span class="text-amber-200">Content blocks</span>',
+                                ]) !!}
                             </div>
                         </div>
                         <div class="text-2xl">🧩</div>
                     </div>
 
                     <div class="mt-4 flex gap-2 flex-wrap">
-                        <a class="dash-btn dash-btn-amber" href="{{ $urlBlocks }}" @click.stop>Перейти →</a>
-                        <a class="dash-btn" href="{{ $urlSections }}" @click.stop>Секции →</a>
+                        <a class="dash-btn dash-btn-amber" href="{{ $urlBlocks }}" @click.stop>{{ __('dashboard.common.go') }}</a>
+                        <a class="dash-btn" href="{{ $urlSections }}" @click.stop>{{ __('dashboard.common.sections') }}</a>
                     </div>
 
                     <div class="dash-help" x-show="open" x-collapse>
-                        <div class="text-xs muted2 uppercase tracking-wide">Как правильно редактировать</div>
+                        <div class="text-xs muted2 uppercase tracking-wide">{{ __('dashboard.common.how_to') }}</div>
                         <ul>
-                            <li>Выбирай нужную <b>секцию</b> (например: <i>home.about_card</i>, <i>layout.footer</i>) и нужное поле.</li>
-                            <li>Тексты на фронте выводятся через <b>HTML</b>. Можно вставлять ссылки, списки, переносы строк.</li>
-                            <li>Если вставляешь HTML — проверяй, чтобы не было незакрытых тегов.</li>
-                            <li>После правок — обнови фронт и проверь RU/RO/EN.</li>
+                            @foreach(trans('dashboard.quick.cards.blocks.help') as $li)
+                                <li>{!! $li !!}</li>
+                            @endforeach
                         </ul>
                     </div>
                 </div>
 
-                {{-- CARD: Chats --}}
-                <div
-                    class="glass-2 dash-card dash-hover dash-expand"
-                    x-data="{ open: false }"
-                    @click="open = !open"
+                {{-- Chats --}}
+                <div class="glass-2 dash-card dash-hover dash-expand"
+                     x-data="{ open: false }"
+                     @click="open = !open"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <div class="text-sm font-semibold text-white/90 flex items-center gap-2">
-                                💬 Общение в чате
+                                {{ __('dashboard.quick.cards.chats.title') }}
                                 <span class="dash-chevron" :class="{ 'is-open': open }">›</span>
                             </div>
                             <div class="muted text-sm mt-1 leading-relaxed">
-                                Личные чаты и support-чаты. Вложения, эмодзи, непрочитанные, быстрые ответы.
+                                {{ __('dashboard.quick.cards.chats.desc') }}
                             </div>
                         </div>
                         <div class="text-2xl">💬</div>
                     </div>
 
                     <div class="mt-4 flex gap-2 flex-wrap">
-                        <a class="dash-btn dash-btn-amber" href="{{ $urlChats }}" @click.stop>Открыть →</a>
+                        <a class="dash-btn dash-btn-amber" href="{{ $urlChats }}" @click.stop>{{ __('dashboard.common.open') }}</a>
                     </div>
 
                     <div class="dash-help" x-show="open" x-collapse>
-                        <div class="text-xs muted2 uppercase tracking-wide">Как работать</div>
+                        <div class="text-xs muted2 uppercase tracking-wide">{{ __('dashboard.common.how_to') }}</div>
                         <ul>
-                            <li>Слева: пользователи и диалоги. Справа: сообщения.</li>
-                            <li><b>Enter</b> — отправка, <b>Shift+Enter</b> — новая строка.</li>
-                            <li>Файлы/картинки можно прикреплять — они сохраняются в storage и скачиваются через защищённый маршрут.</li>
-                            <li>Непрочитанные считаются по <i>last_read_at</i> участника диалога.</li>
+                            @foreach(trans('dashboard.quick.cards.chats.help') as $li)
+                                <li>{!! $li !!}</li>
+                            @endforeach
                         </ul>
                     </div>
                 </div>
 
-                {{-- CARD: Tasks --}}
-                <div
-                    class="glass-2 dash-card dash-hover dash-expand"
-                    x-data="{ open: false }"
-                    @click="open = !open"
+                {{-- Tasks --}}
+                <div class="glass-2 dash-card dash-hover dash-expand"
+                     x-data="{ open: false }"
+                     @click="open = !open"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <div class="text-sm font-semibold text-white/90 flex items-center gap-2">
-                                ✅ Задачи команды
+                                {{ __('dashboard.quick.cards.tasks.title') }}
                                 <span class="dash-chevron" :class="{ 'is-open': open }">›</span>
                             </div>
                             <div class="muted text-sm mt-1 leading-relaxed">
-                                Создание задач, назначение ответственных, комментарии и вложения прямо в View.
+                                {{ __('dashboard.quick.cards.tasks.desc') }}
                             </div>
                         </div>
                         <div class="text-2xl">✅</div>
                     </div>
 
                     <div class="mt-4 flex gap-2 flex-wrap">
-                        <a class="dash-btn dash-btn-amber" href="{{ $urlTasks }}" @click.stop>Открыть →</a>
+                        <a class="dash-btn dash-btn-amber" href="{{ $urlTasks }}" @click.stop>{{ __('dashboard.common.open') }}</a>
                     </div>
 
                     <div class="dash-help" x-show="open" x-collapse>
-                        <div class="text-xs muted2 uppercase tracking-wide">Как вести задачи</div>
+                        <div class="text-xs muted2 uppercase tracking-wide">{{ __('dashboard.common.how_to') }}</div>
                         <ul>
-                            <li>В задаче фиксируй: <b>что сделать</b>, <b>срок</b>, <b>ответственного</b>, <b>вложения</b>.</li>
-                            <li>В <b>View</b> задачи добавляй комментарии (кнопка видна всем авторизованным), это история работы.</li>
-                            <li>Вложения к комментариям — чтобы не терялись файлы в чатах.</li>
+                            @foreach(trans('dashboard.quick.cards.tasks.help') as $li)
+                                <li>{!! $li !!}</li>
+                            @endforeach
                         </ul>
                     </div>
                 </div>
 
-                {{-- CARD: Users/Roles --}}
-                <div
-                    class="glass-2 dash-card dash-hover dash-expand"
-                    x-data="{ open: false }"
-                    @click="open = !open"
+                {{-- Users/Roles --}}
+                <div class="glass-2 dash-card dash-hover dash-expand"
+                     x-data="{ open: false }"
+                     @click="open = !open"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <div class="text-sm font-semibold text-white/90 flex items-center gap-2">
-                                👤 Пользователи и роли
+                                {{ __('dashboard.quick.cards.users_roles.title') }}
                                 <span class="dash-chevron" :class="{ 'is-open': open }">›</span>
                             </div>
                             <div class="muted text-sm mt-1 leading-relaxed">
-                                Управление пользователями, назначение ролей (Shield), SUPER_ADMIN через is_admin.
+                                {{ __('dashboard.quick.cards.users_roles.desc') }}
                             </div>
                         </div>
                         <div class="text-2xl">🛡</div>
@@ -338,11 +372,11 @@
                     </div>
 
                     <div class="dash-help" x-show="open" x-collapse>
-                        <div class="text-xs muted2 uppercase tracking-wide">Советы</div>
+                        <div class="text-xs muted2 uppercase tracking-wide">{{ __('dashboard.common.tips') }}</div>
                         <ul>
-                            <li>SUPER_ADMIN (is_admin=1) проходит любые проверки через Gate::before.</li>
-                            <li>Остальным пользователям права даём через роли/permissions (Shield).</li>
-                            <li>Если после генерации прав что-то “не видно” — обычно помогает permission cache reset / optimize:clear.</li>
+                            @foreach(trans('dashboard.quick.cards.users_roles.help') as $li)
+                                <li>{!! $li !!}</li>
+                            @endforeach
                         </ul>
                     </div>
                 </div>
@@ -350,14 +384,14 @@
             </div>
         </div>
 
-        {{-- LEFT MENU / СТРУКТУРА --}}
+        {{-- STRUCTURE --}}
         <div class="glass dash-section dash-pad">
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <div class="section-title text-lg">Что где находится</div>
-                    <div class="sub-title text-sm mt-1">Кликни на карточку — раскроется описание раздела.</div>
+                    <div class="section-title text-lg">{{ __('dashboard.structure.title') }}</div>
+                    <div class="sub-title text-sm mt-1">{{ __('dashboard.structure.subtitle') }}</div>
                 </div>
-                <span class="dash-pill">🧭 Навигация</span>
+                <span class="dash-pill">{{ __('dashboard.structure.badge') }}</span>
             </div>
 
             <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -365,114 +399,111 @@
                 {{-- Content --}}
                 <div class="glass-2 dash-card">
                     <div class="flex items-center justify-between gap-3">
-                        <div class="text-sm font-semibold text-white/90">Content</div>
-                        <div class="text-xs muted2">Контент, секции, сущности</div>
+                        <div class="text-sm font-semibold text-white/90">{{ __('dashboard.structure.content.title') }}</div>
+                        <div class="text-xs muted2">{{ __('dashboard.structure.content.hint') }}</div>
                     </div>
 
                     <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
 
                         {{-- Content sections --}}
-                        <div
-                            class="glass dash-mini dash-hover dash-expand"
-                            x-data="{ open: false }"
-                            @click="open = !open"
+                        <div class="glass dash-mini dash-hover dash-expand"
+                             x-data="{ open: false }"
+                             @click="open = !open"
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <div class="text-sm font-semibold text-white/90 flex items-center gap-2">
-                                        🧩 Content sections
+                                        {{ __('dashboard.structure.content.sections.title') }}
                                         <span class="dash-chevron" :class="{ 'is-open': open }">›</span>
                                     </div>
                                     <div class="muted text-sm mt-1 leading-relaxed">
-                                        Включение/выключение секций и структура страниц (привязка по section_id).
+                                        {{ __('dashboard.structure.content.sections.desc') }}
                                     </div>
                                 </div>
-                                <a href="{{ $urlSections }}" class="dash-btn dash-btn-amber" @click.stop>Открыть →</a>
+                                <a href="{{ $urlSections }}" class="dash-btn dash-btn-amber" @click.stop>{{ __('dashboard.common.open') }}</a>
                             </div>
 
                             <div class="dash-help" x-show="open" x-collapse>
-                                <div class="text-xs muted2 uppercase tracking-wide">Инструкция</div>
+                                <div class="text-xs muted2 uppercase tracking-wide">{{ __('dashboard.common.instruction') }}</div>
                                 <ul>
-                                    <li>Секция = “переключатель” блока на странице (is_active).</li>
-                                    <li>Сущности (banners/sliders/cards/…) привязаны к section_id — это важно для порядка вывода.</li>
-                                    <li>Если секция выключена — на фронте блок не показываем и записи не подгружаем.</li>
+                                    @foreach(trans('dashboard.structure.content.sections.help') as $li)
+                                        <li>{!! $li !!}</li>
+                                    @endforeach
                                 </ul>
                             </div>
                         </div>
 
                         {{-- Content blocks --}}
-                        <div
-                            class="glass dash-mini dash-hover dash-expand"
-                            x-data="{ open: false }"
-                            @click="open = !open"
+                        <div class="glass dash-mini dash-hover dash-expand"
+                             x-data="{ open: false }"
+                             @click="open = !open"
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <div class="text-sm font-semibold text-white/90 flex items-center gap-2">
-                                        📝 Content blocks
+                                        {{ __('dashboard.structure.content.blocks.title') }}
                                         <span class="dash-chevron" :class="{ 'is-open': open }">›</span>
                                     </div>
                                     <div class="muted text-sm mt-1 leading-relaxed">
-                                        Тексты сайта (EN/RU/RO). Вывод на фронте через
-                                        @verbatim{!! !!}@endverbatim
+                                        {!! __('dashboard.structure.content.blocks.desc', [
+                                            'raw' => '@verbatim{!! !!}@endverbatim'
+                                        ]) !!}
                                     </div>
                                 </div>
-                                <a href="{{ $urlBlocks }}" class="dash-btn dash-btn-amber" @click.stop>Открыть →</a>
+                                <a href="{{ $urlBlocks }}" class="dash-btn dash-btn-amber" @click.stop>{{ __('dashboard.common.open') }}</a>
                             </div>
 
                             <div class="dash-help" x-show="open" x-collapse>
-                                <div class="text-xs muted2 uppercase tracking-wide">Инструкция</div>
+                                <div class="text-xs muted2 uppercase tracking-wide">{{ __('dashboard.common.instruction') }}</div>
                                 <ul>
-                                    <li>Меняем текст — сразу видим результат на фронте (после обновления страницы).</li>
-                                    <li>Если нужно “переносы” — лучше использовать HTML: <code>&lt;br&gt;</code> или список.</li>
-                                    <li>Сначала правим RU/RO/EN по очереди, чтобы не было “пустых” локалей.</li>
+                                    @foreach(trans('dashboard.structure.content.blocks.help') as $li)
+                                        <li>{!! $li !!}</li>
+                                    @endforeach
                                 </ul>
                             </div>
                         </div>
 
                         {{-- Banners --}}
-                        <div
-                            class="glass dash-mini dash-hover dash-expand"
-                            x-data="{ open: false }"
-                            @click="open = !open"
+                        <div class="glass dash-mini dash-hover dash-expand"
+                             x-data="{ open: false }"
+                             @click="open = !open"
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <div class="text-sm font-semibold text-white/90 flex items-center gap-2">
-                                        🖼 Banners
+                                        {{ __('dashboard.structure.content.banners.title') }}
                                         <span class="dash-chevron" :class="{ 'is-open': open }">›</span>
                                     </div>
                                     <div class="muted text-sm mt-1 leading-relaxed">
-                                        Hero-баннеры и позиции. CTA-кнопка выводится 1 раз вне карусели.
+                                        {{ __('dashboard.structure.content.banners.desc') }}
                                     </div>
                                 </div>
-                                <a href="{{ $urlBanners }}" class="dash-btn dash-btn-amber" @click.stop>Открыть →</a>
+                                <a href="{{ $urlBanners }}" class="dash-btn dash-btn-amber" @click.stop>{{ __('dashboard.common.open') }}</a>
                             </div>
 
                             <div class="dash-help" x-show="open" x-collapse>
-                                <div class="text-xs muted2 uppercase tracking-wide">Инструкция</div>
+                                <div class="text-xs muted2 uppercase tracking-wide">{{ __('dashboard.common.instruction') }}</div>
                                 <ul>
-                                    <li>Следи за <b>position</b> — порядок слайдов на фронте.</li>
-                                    <li>CTA-кнопка на фронте должна быть <b>одна</b> (вне owl-carousel).</li>
-                                    <li>Если меняешь фон/изображения — проверь адаптив (mobile).</li>
+                                    @foreach(trans('dashboard.structure.content.banners.help') as $li)
+                                        <li>{!! $li !!}</li>
+                                    @endforeach
                                 </ul>
                             </div>
                         </div>
 
                         {{-- Sliders / Cards --}}
-                        <div
-                            class="glass dash-mini dash-hover dash-expand"
-                            x-data="{ open: false }"
-                            @click="open = !open"
+                        <div class="glass dash-mini dash-hover dash-expand"
+                             x-data="{ open: false }"
+                             @click="open = !open"
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <div class="text-sm font-semibold text-white/90 flex items-center gap-2">
-                                        🎞 Sliders / 🧱 Cards
+                                        {{ __('dashboard.structure.content.sliders_cards.title') }}
                                         <span class="dash-chevron" :class="{ 'is-open': open }">›</span>
                                     </div>
                                     <div class="muted text-sm mt-1 leading-relaxed">
-                                        Слайдеры и карточки сервисов. Локаль + позиции + секции.
+                                        {{ __('dashboard.structure.content.sliders_cards.desc') }}
                                     </div>
                                 </div>
                                 <div class="flex flex-wrap gap-2">
@@ -482,11 +513,11 @@
                             </div>
 
                             <div class="dash-help" x-show="open" x-collapse>
-                                <div class="text-xs muted2 uppercase tracking-wide">Инструкция</div>
+                                <div class="text-xs muted2 uppercase tracking-wide">{{ __('dashboard.common.instruction') }}</div>
                                 <ul>
-                                    <li>У каждой записи есть locale — проверь, что RU/RO/EN заполнены.</li>
-                                    <li>Позиции (position) должны идти без “скачков”, чтобы порядок был предсказуемый.</li>
-                                    <li>Если блок исчез — проверь секцию (Content sections) и привязку section_id.</li>
+                                    @foreach(trans('dashboard.structure.content.sliders_cards.help') as $li)
+                                        <li>{!! $li !!}</li>
+                                    @endforeach
                                 </ul>
                             </div>
                         </div>
@@ -497,34 +528,33 @@
                 {{-- Access / History --}}
                 <div class="glass-2 dash-card">
                     <div class="flex items-center justify-between gap-3">
-                        <div class="text-sm font-semibold text-white/90">Access</div>
-                        <div class="text-xs muted2">Лог изменений</div>
+                        <div class="text-sm font-semibold text-white/90">{{ __('dashboard.structure.access.title') }}</div>
+                        <div class="text-xs muted2">{{ __('dashboard.structure.access.hint') }}</div>
                     </div>
 
-                    <div
-                        class="mt-4 glass dash-mini dash-hover dash-expand"
-                        x-data="{ open: false }"
-                        @click="open = !open"
+                    <div class="mt-4 glass dash-mini dash-hover dash-expand"
+                         x-data="{ open: false }"
+                         @click="open = !open"
                     >
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="text-sm font-semibold text-white/90 flex items-center gap-2">
-                                    🕘 History
+                                    {{ __('dashboard.structure.access.history.title') }}
                                     <span class="dash-chevron" :class="{ 'is-open': open }">›</span>
                                 </div>
                                 <div class="muted text-sm mt-1 leading-relaxed">
-                                    История изменений: create/update/delete, old/new values, rollback (SUPER_ADMIN).
+                                    {{ __('dashboard.structure.access.history.desc') }}
                                 </div>
                             </div>
-                            <a href="{{ $urlHistory }}" class="dash-btn dash-btn-amber" @click.stop>Открыть →</a>
+                            <a href="{{ $urlHistory }}" class="dash-btn dash-btn-amber" @click.stop>{{ __('dashboard.common.open') }}</a>
                         </div>
 
                         <div class="dash-help" x-show="open" x-collapse>
-                            <div class="text-xs muted2 uppercase tracking-wide">Инструкция</div>
+                            <div class="text-xs muted2 uppercase tracking-wide">{{ __('dashboard.common.instruction') }}</div>
                             <ul>
-                                <li>История пишется по моделям (created/updated/deleted).</li>
-                                <li>Rollback доступен только SUPER_ADMIN.</li>
-                                <li>Если нужно понять “что поменяли” — смотри old_values/new_values.</li>
+                                @foreach(trans('dashboard.structure.access.history.help') as $li)
+                                    <li>{!! $li !!}</li>
+                                @endforeach
                             </ul>
                         </div>
                     </div>
@@ -557,7 +587,7 @@
                 }
 
                 ping();
-                setInterval(ping, 25000); // каждые 25 секунд
+                setInterval(ping, 25000);
             })();
         </script>
     @endpush

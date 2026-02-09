@@ -5,7 +5,8 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\PromoBlockResource\Pages;
 use App\Models\PromoBlock;
 use App\Models\ContentSection;
-
+use App\Support\TableExport;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -14,18 +15,34 @@ use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Grouping\Group;
 use Illuminate\Database\Eloquent\Builder;
-use App\Support\TableExport;
-use Barryvdh\DomPDF\Facade\Pdf;
-
 
 class PromoBlockResource extends Resource
 {
     protected static ?string $model = PromoBlock::class;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-rectangle-stack';
-    protected static ?string $navigationGroup = 'Content';
-    protected static ?string $navigationLabel = 'Promo Blocks';
-    protected static ?int    $navigationSort  = 20;
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?int $navigationSort = 20;
+
+    // ✅ меню (единый Контент)
+    public static function getNavigationGroup(): ?string
+    {
+        return __('nav.groups.content');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('promo.page.nav_label');
+    }
+
+    public static function getLabel(): ?string
+    {
+        return __('promo.page.nav_label');
+    }
+
+    public static function getPluralLabel(): ?string
+    {
+        return __('promo.page.nav_label');
+    }
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -37,7 +54,7 @@ class PromoBlockResource extends Resource
         return $form->schema([
             Forms\Components\Grid::make(3)->schema([
                 Forms\Components\Select::make('section_id')
-                    ->label('Section')
+                    ->label(__('promo.form.section'))
                     ->relationship(
                         name: 'section',
                         titleAttribute: 'title',
@@ -56,6 +73,7 @@ class PromoBlockResource extends Resource
                     ]),
 
                 Forms\Components\Select::make('locale')
+                    ->label(__('promo.form.locale'))
                     ->options([
                         'en' => 'English',
                         'ru' => 'Русский',
@@ -65,31 +83,40 @@ class PromoBlockResource extends Resource
                     ->required(),
 
                 Forms\Components\TextInput::make('position')
+                    ->label(__('promo.form.position'))
                     ->numeric()
                     ->default(1)
                     ->required(),
             ]),
 
             Forms\Components\TextInput::make('title')
-                ->label('Main title')
+                ->label(__('promo.form.main_title'))
                 ->required()
                 ->maxLength(255),
 
             Forms\Components\TextInput::make('subtitle')
-                ->label('Subtitle')
+                ->label(__('promo.form.subtitle'))
                 ->maxLength(255),
 
-            Forms\Components\Textarea::make('description')->rows(3),
-            Forms\Components\Textarea::make('description_2')->rows(2),
-            Forms\Components\Textarea::make('description_3')->rows(2),
+            Forms\Components\Textarea::make('description')
+                ->label(__('promo.form.description'))
+                ->rows(3),
+
+            Forms\Components\Textarea::make('description_2')
+                ->label(__('promo.form.description_2'))
+                ->rows(2),
+
+            Forms\Components\Textarea::make('description_3')
+                ->label(__('promo.form.description_3'))
+                ->rows(2),
 
             Forms\Components\TextInput::make('link')
-                ->label('Link')
+                ->label(__('promo.form.link'))
                 ->url()
                 ->nullable(),
 
             Forms\Components\FileUpload::make('image_path')
-                ->label('Image')
+                ->label(__('promo.form.image'))
                 ->image()
                 ->directory('promo-blocks')
                 ->nullable(),
@@ -97,151 +124,152 @@ class PromoBlockResource extends Resource
     }
 
     public static function table(Table $table): Table
-{
-    $type = 'promo';
+    {
+        $type = 'promo';
 
-    return $table
-        ->modifyQueryUsing(fn (Builder $query) =>
-            $query->with('section')
-                  ->orderBy('section_id')
-                  ->orderBy('position')
-        )
-        ->groups([
-            Group::make('section.title')
-                ->label('Section')
-                ->collapsible(),
-        ])
-        ->defaultGroup('section.title')
-        ->defaultSort('position')
+        return $table
+            ->modifyQueryUsing(fn (Builder $query) =>
+                $query->with('section')
+                      ->orderBy('section_id')
+                      ->orderBy('position')
+            )
+            ->groups([
+                Group::make('section.title')
+                    ->label(__('promo.form.section'))
+                    ->collapsible(),
+            ])
+            ->defaultGroup('section.title')
+            ->defaultSort('position')
+            ->headerActions([
+                Tables\Actions\Action::make('export')
+                    ->label(__('promo.export.action'))
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->modalHeading(__('promo.export.heading'))
+                    ->form([
+                        Forms\Components\Select::make('scope')
+                            ->label(__('promo.export.scope'))
+                            ->options([
+                                'all'     => __('promo.export.scope_all'),
+                                'section' => __('promo.export.scope_section'),
+                            ])
+                            ->default('all')
+                            ->required()
+                            ->live(),
 
-        // ✅ HEADER EXPORT (как в banners)
-        ->headerActions([
-            Tables\Actions\Action::make('export')
-                ->label('Экспорт данных')
-                ->icon('heroicon-o-arrow-down-tray')
-                ->modalHeading('Экспорт Promo Blocks')
-                ->form([
-                    Forms\Components\Select::make('scope')
-                        ->label('Что экспортировать?')
-                        ->options([
-                            'all'     => 'Все секции',
-                            'section' => 'Только выбранную секцию',
-                        ])
-                        ->default('all')
-                        ->required()
-                        ->live(),
+                        Forms\Components\Select::make('section_id')
+                            ->label(__('promo.export.section'))
+                            ->options(fn () =>
+                                ContentSection::query()
+                                    ->where('type', $type)
+                                    ->orderBy('position')
+                                    ->pluck('title', 'id')
+                                    ->toArray()
+                            )
+                            ->visible(fn (callable $get) => $get('scope') === 'section')
+                            ->searchable(),
 
-                    Forms\Components\Select::make('section_id')
-                        ->label('Секция')
-                        ->options(fn () =>
-                            ContentSection::query()
-                                ->where('type', $type)
-                                ->orderBy('position')
-                                ->pluck('title', 'id')
-                                ->toArray()
-                        )
-                        ->visible(fn (callable $get) => $get('scope') === 'section')
-                        ->searchable(),
+                        Forms\Components\Select::make('format')
+                            ->label(__('promo.export.format'))
+                            ->options([
+                                'pdf' => __('promo.export.pdf'),
+                                'xml' => __('promo.export.xml'),
+                            ])
+                            ->default('pdf')
+                            ->required(),
+                    ])
+                    ->action(function (array $data, $livewire) {
+                        $columns = [
+                            'section.title' => __('promo.export.columns.section'),
+                            'locale'        => __('promo.export.columns.locale'),
+                            'position'      => __('promo.export.columns.position'),
+                            'title'         => __('promo.export.columns.title'),
+                            'subtitle'      => __('promo.export.columns.subtitle'),
+                            'updated_at'    => __('promo.export.columns.updated'),
+                        ];
 
-                    Forms\Components\Select::make('format')
-                        ->label('Формат')
-                        ->options([
-                            'pdf' => 'PDF',
-                            'xml' => 'XML',
-                        ])
-                        ->default('pdf')
-                        ->required(),
-                ])
-                ->action(function (array $data, $livewire) use ($type) {
+                        $query = method_exists($livewire, 'getFilteredTableQuery')
+                            ? $livewire->getFilteredTableQuery()
+                            : PromoBlock::query();
 
-                    $columns = [
-                        'section.title' => 'Section',
-                        'locale'        => 'Locale',
-                        'position'      => 'Position',
-                        'title'         => 'Title',
-                        'subtitle'      => 'Subtitle',
-                        'updated_at'    => 'Updated at',
-                    ];
+                        $query->with('section')
+                              ->orderBy('section_id')
+                              ->orderBy('position');
 
-                    $query = method_exists($livewire, 'getFilteredTableQuery')
-                        ? $livewire->getFilteredTableQuery()
-                        : PromoBlock::query();
+                        if (($data['scope'] ?? 'all') === 'section' && ! empty($data['section_id'])) {
+                            $query->where('section_id', $data['section_id']);
+                        }
 
-                    $query->with('section')
-                          ->orderBy('section_id')
-                          ->orderBy('position');
+                        $rows = $query->get();
 
-                    if (($data['scope'] ?? 'all') === 'section' && !empty($data['section_id'])) {
-                        $query->where('section_id', $data['section_id']);
-                    }
+                        $title = __('promo.export.title');
+                        $subtitle = now()->format(__('promo.export.subtitle_fmt'));
 
-                    $rows = $query->get();
+                        if (($data['format'] ?? 'pdf') === 'xml') {
+                            $xml = TableExport::toXml('export', 'row', $columns, $rows);
 
-                    $title = 'Promo Blocks export';
-                    $subtitle = now()->format('Y-m-d H:i');
+                            return response($xml, 200, [
+                                'Content-Type'        => 'application/xml; charset=UTF-8',
+                                'Content-Disposition' => 'attachment; filename="promo_blocks_' . now()->format('Ymd_His') . '.xml"',
+                            ]);
+                        }
 
-                    // XML
-                    if (($data['format'] ?? 'pdf') === 'xml') {
-                        $xml = TableExport::toXml('export', 'row', $columns, $rows);
+                        $pdf = Pdf::loadView('exports.table-pdf', compact('title', 'subtitle', 'columns', 'rows'));
 
-                        return response($xml, 200, [
-                            'Content-Type'        => 'application/xml; charset=UTF-8',
-                            'Content-Disposition' => 'attachment; filename="promo_blocks_' . now()->format('Ymd_His') . '.xml"',
-                        ]);
-                    }
+                        return response()->streamDownload(
+                            fn () => print($pdf->output()),
+                            'promo_blocks_' . now()->format('Ymd_His') . '.pdf'
+                        );
+                    }),
+            ])
+            ->columns([
+                Tables\Columns\TextColumn::make('locale')
+                    ->label(__('promo.table.locale'))
+                    ->badge(),
 
-                    // PDF
-                    $pdf = Pdf::loadView('exports.table-pdf', [
-                        'title'    => $title,
-                        'subtitle' => $subtitle,
-                        'columns'  => $columns,
-                        'rows'     => $rows,
-                    ]);
+                Tables\Columns\TextColumn::make('position')
+                    ->label(__('promo.table.position'))
+                    ->sortable(),
 
-                    return response()->streamDownload(
-                        fn () => print($pdf->output()),
-                        'promo_blocks_' . now()->format('Ymd_His') . '.pdf'
-                    );
-                }),
-        ])
+                Tables\Columns\ImageColumn::make('image_path')
+                    ->label(__('promo.table.image'))
+                    ->square(),
 
-        // ✅ COLUMNS
-        ->columns([
-            Tables\Columns\TextColumn::make('locale')->badge(),
-            Tables\Columns\TextColumn::make('position')->sortable(),
-            Tables\Columns\ImageColumn::make('image_path')->square()->label('Image'),
-            Tables\Columns\TextColumn::make('title')->limit(40)->searchable(),
-            Tables\Columns\TextColumn::make('updated_at')->dateTime('Y-m-d H:i')->sortable(),
-        ])
+                Tables\Columns\TextColumn::make('title')
+                    ->label(__('promo.table.title'))
+                    ->limit(40)
+                    ->searchable(),
 
-        // ✅ FILTERS
-        ->filters([
-            SelectFilter::make('section_id')
-                ->label('Section')
-                ->relationship(
-                    name: 'section',
-                    titleAttribute: 'title',
-                    modifyQueryUsing: fn (Builder $query) =>
-                        $query->where('type', $type)->orderBy('position')
-                ),
-            SelectFilter::make('locale')
-                ->options([
-                    'en' => 'English',
-                    'ru' => 'Русский',
-                    'ro' => 'Română',
-                ]),
-        ])
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label(__('promo.table.updated_at'))
+                    ->dateTime('Y-m-d H:i')
+                    ->sortable(),
+            ])
+            ->filters([
+                SelectFilter::make('section_id')
+                    ->label(__('promo.filters.section'))
+                    ->relationship(
+                        name: 'section',
+                        titleAttribute: 'title',
+                        modifyQueryUsing: fn (Builder $query) =>
+                            $query->where('type', $type)->orderBy('position')
+                    ),
 
-        // ✅ ACTIONS
-        ->actions([
-            Tables\Actions\EditAction::make(),
-            Tables\Actions\DeleteAction::make(),
-        ])
-        ->bulkActions([
-            Tables\Actions\DeleteBulkAction::make(),
-        ]);
-}
-
+                SelectFilter::make('locale')
+                    ->label(__('promo.filters.locale'))
+                    ->options([
+                        'en' => 'English',
+                        'ru' => 'Русский',
+                        'ro' => 'Română',
+                    ]),
+            ])
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\DeleteBulkAction::make(),
+            ]);
+    }
 
     public static function getPages(): array
     {

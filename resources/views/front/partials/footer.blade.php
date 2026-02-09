@@ -293,8 +293,9 @@
 </section>
 
 
-
 <!-- ========= POPUPS ========= -->
+
+{{-- ===== Купон ===== --}}
 <div id="SubscribePopup" class="modal fade" role="dialog">
     <div class="modal-dialog">
         <div class="modal-content" style="background: transparent url('{{ asset('tiband/img/modal1.jpg') }}') repeat scroll 0% 0% / cover ;">
@@ -302,38 +303,51 @@
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
                 <h4 class="modal-title">У ВАС ЕСТЬ СКИДОЧНЫЙ КУПОН?</h4>
             </div>
+
             <div class="modal-body">
                 <p>ВВЕДИТЕ ЕГО ЗЕСЬ И СЕЙЧАС!</p>
-                <form class="subscribe-form-popup" id="couponForm">
-    <input name="code" class="subscribe-popup" placeholder="ВАШ КУПОН" type="text" autocomplete="off">
-    <button class="button-1 button-medium" type="submit">ПРОВЕРИТЬ!</button>
 
-    {{-- ✅ статус/сообщения --}}
-    <div id="couponMsg" style="margin-top:10px; font-size:14px;"></div>
+                {{-- ✅ ВАЖНО: чтобы НЕ было POST / --}}
+                <form class="subscribe-form-popup"
+                      id="couponForm"
+                      method="POST"
+                      action="javascript:void(0);">
+                    @csrf
 
-    {{-- ✅ активный купон (скрыт пока нет купона) --}}
-    <div id="couponActive"
-         style="display:none; margin-top:12px; padding:10px 12px; border-radius:10px; background:rgba(0,0,0,.45); color:#fff;">
-        <div style="font-size:13px; opacity:.85;">Активен купон:</div>
-        <div style="margin-top:4px; font-weight:700;">
-            <span id="couponActiveCode">—</span>
-            <span style="opacity:.85;">(</span><span id="couponActivePercent">0</span><span style="opacity:.85;">%)</span>
-        </div>
+                    <input name="code"
+                           class="subscribe-popup"
+                           placeholder="ВАШ КУПОН"
+                           type="text"
+                           autocomplete="off">
 
-        <button type="button" id="couponDeactivateBtn"
-                class="button-1 button-medium"
-                style="margin-top:10px; width:100%; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.25);">
-            УБРАТЬ КУПОН
-        </button>
-    </div>
-</form>
+                    <button class="button-1 button-medium" type="submit">
+                        ПРОВЕРИТЬ!
+                    </button>
 
+                    <div id="couponMsg" style="margin-top:10px; font-size:14px;"></div>
+
+                    <div id="couponActive"
+                         style="display:none; margin-top:12px; padding:10px 12px; border-radius:10px; background:rgba(0,0,0,.45); color:#fff;">
+                        <div style="font-size:13px; opacity:.85;">Активен купон:</div>
+                        <div style="margin-top:4px; font-weight:700;">
+                            <span id="couponActiveCode">—</span>
+                            <span style="opacity:.85;">(</span><span id="couponActivePercent">0</span><span style="opacity:.85;">%)</span>
+                        </div>
+
+                        <button type="button" id="couponDeactivateBtn"
+                                class="button-1 button-medium"
+                                style="margin-top:10px; width:100%; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.25);">
+                            УБРАТЬ КУПОН
+                        </button>
+                    </div>
+                </form>
 
             </div>
         </div>
     </div>
 </div>
 
+{{-- ===== Заказ (НЕ form!) ===== --}}
 <div id="CookiePopup" class="modal fade" role="dialog">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -341,12 +355,20 @@
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
                 <h4 class="modal-title">ВЫ ДЕЙСТВИТЕЛЬНО ХОТИТЕ СДЕЛАТЬ ЗАКАЗ?</h4>
             </div>
+
             <div class="modal-body">
                 <p>Согласно предыдущему, CTR оправдывает потребительский бренд...</p>
-                <form class="subscribe-form-popup">
-                    <button class="button-1 button-medium" type="submit">НЕТ, Я ПЕРЕДУМАЛ</button>
-                    <button class="button-1 button-medium" type="submit">КОНЕЧНО, ДА!</button>
-                </form>
+
+                {{-- ✅ было form -> submit -> POST / --}}
+                <div class="subscribe-form-popup">
+                    <button class="button-1 button-medium" type="button" data-dismiss="modal">
+                        НЕТ, Я ПЕРЕДУМАЛ
+                    </button>
+
+                    <a class="button-1 button-medium" href="{{ route('cart.index') }}">
+                        КОНЕЧНО, ДА!
+                    </a>
+                </div>
             </div>
         </div>
     </div>

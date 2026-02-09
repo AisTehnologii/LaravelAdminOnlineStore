@@ -11,29 +11,46 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-
 use Illuminate\Support\Facades\DB;
 
 class RevisionResource extends Resource
 {
     protected static ?string $model = Revision::class;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-clock';
-    protected static ?string $navigationGroup = 'Access';
-    protected static ?string $navigationLabel = 'History';
-    protected static ?int    $navigationSort  = 50;
+    protected static ?string $navigationIcon = 'heroicon-o-clock';
+    protected static ?int $navigationSort = 50;
 
     // ✅ только чтение
     public static function canCreate(): bool { return false; }
     public static function canEdit($record): bool { return false; }
     public static function canDelete($record): bool { return false; }
 
+    // ✅ меню (через lang)
+    public static function getNavigationGroup(): ?string
+    {
+        return __('nav.groups.access');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('revision.navigation_label');
+    }
+
+    public static function getPluralLabel(): ?string
+    {
+        return __('revision.navigation_label');
+    }
+
+    public static function getLabel(): ?string
+    {
+        return __('revision.navigation_label');
+    }
+
     public static function form(Form $form): Form
     {
-        // form используется на View странице
         return $form->schema([
             Forms\Components\Textarea::make('old_values_pretty')
-                ->label('Old values')
+                ->label(__('revision.form.old_values'))
                 ->disabled()
                 ->rows(14)
                 ->dehydrated(false)
@@ -42,7 +59,7 @@ class RevisionResource extends Resource
                 }),
 
             Forms\Components\Textarea::make('new_values_pretty')
-                ->label('New values')
+                ->label(__('revision.form.new_values'))
                 ->disabled()
                 ->rows(14)
                 ->dehydrated(false)
@@ -58,93 +75,94 @@ class RevisionResource extends Resource
             ->modifyQueryUsing(fn (Builder $query) => $query->with('user'))
             ->defaultSort('created_at', 'desc')
             ->headerActions([
-            Tables\Actions\Action::make('clearHistory')
-                ->label('Очистить историю')
-                ->icon('heroicon-o-trash')
-                ->color('danger')
-                ->requiresConfirmation()
-                ->modalHeading('Очистить историю изменений')
-                ->modalDescription('Это действие удалит ВСЮ историю изменений без возможности восстановления.')
-                ->modalSubmitActionLabel('Да, очистить')
-                ->action(function () {
-                    DB::table('revisions')->truncate();
+                Tables\Actions\Action::make('clearHistory')
+                    ->label(__('revision.actions.clear_history'))
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading(__('revision.modal.clear_heading'))
+                    ->modalDescription(__('revision.modal.clear_description'))
+                    ->modalSubmitActionLabel(__('revision.modal.clear_submit'))
+                    ->action(function () {
+                        DB::table('revisions')->truncate();
 
-                    Notification::make()
-                        ->title('История изменений очищена')
-                        ->success()
-                        ->send();
-                }),
-        ])
+                        Notification::make()
+                            ->title(__('revision.notifications.cleared'))
+                            ->success()
+                            ->send();
+                    }),
+            ])
             ->columns([
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Date')
+                    ->label(__('revision.table.date'))
                     ->dateTime('Y-m-d H:i')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('event')
                     ->badge()
-                    ->label('Event')
+                    ->label(__('revision.table.event'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('revisionable_type')
-                    ->label('Model')
+                    ->label(__('revision.table.model'))
                     ->formatStateUsing(fn ($state) => class_basename($state))
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('revisionable_id')
-                    ->label('ID')
+                    ->label(__('revision.table.id'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('user.name')
-                    ->label('User')
-                    ->placeholder('—')
+                    ->label(__('revision.table.user'))
+                    ->placeholder(__('revision.common.dash'))
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('ip')
-                    ->label('IP')
+                    ->label(__('revision.table.ip'))
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('user_agent')
-                    ->label('User agent')
+                    ->label(__('revision.table.user_agent'))
                     ->limit(40)
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('event')
+                    ->label(__('revision.filters.event'))
                     ->options([
-                        'created' => 'created',
-                        'updated' => 'updated',
-                        'deleted' => 'deleted',
+                        'created' => __('revision.events.created'),
+                        'updated' => __('revision.events.updated'),
+                        'deleted' => __('revision.events.deleted'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('revisionable_type')
-                    ->label('Model')
+                    ->label(__('revision.filters.model'))
                     ->options([
-                        \App\Models\Banner::class        => 'Banner',
-                        \App\Models\Slider::class        => 'Slider',
-                        \App\Models\Card::class          => 'Card',
-                        \App\Models\Project::class       => 'Project',
-                        \App\Models\Quote::class         => 'Quote',
-                        \App\Models\BlogCard::class      => 'BlogCard',
-                        \App\Models\ContentBlock::class  => 'ContentBlock',
-                        \App\Models\ContentSection::class=> 'ContentSection',
+                        \App\Models\Banner::class         => 'Banner',
+                        \App\Models\Slider::class         => 'Slider',
+                        \App\Models\Card::class           => 'Card',
+                        \App\Models\Project::class        => 'Project',
+                        \App\Models\Quote::class          => 'Quote',
+                        \App\Models\BlogCard::class       => 'BlogCard',
+                        \App\Models\ContentBlock::class   => 'ContentBlock',
+                        \App\Models\ContentSection::class => 'ContentSection',
                     ])
                     ->searchable(),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
+                Tables\Actions\ViewAction::make()
+                    ->label(__('revision.actions.view')),
 
-                // ✅ КНОПКА ОТКАТА
                 Tables\Actions\Action::make('rollback')
-                    ->label('Rollback')
+                    ->label(__('revision.actions.rollback'))
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->color('danger')
                     ->requiresConfirmation()
                     ->action(function (Revision $record) {
-                        $record->rollback(); // метод в модели Revision
+                        $record->rollback();
 
                         Notification::make()
-                            ->title('Rollback выполнен')
+                            ->title(__('revision.notifications.rollback_done'))
                             ->success()
                             ->send();
                     }),

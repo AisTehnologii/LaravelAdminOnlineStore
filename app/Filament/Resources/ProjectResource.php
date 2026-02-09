@@ -20,10 +20,29 @@ class ProjectResource extends Resource
 {
     protected static ?string $model = Project::class;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-briefcase';
-    protected static ?string $navigationGroup = 'Content';
-    protected static ?string $navigationLabel = 'Projects';
-    protected static ?int    $navigationSort  = 40;
+    protected static ?string $navigationIcon = 'heroicon-o-briefcase';
+    protected static ?int $navigationSort = 40;
+
+    // ✅ меню
+    public static function getNavigationGroup(): ?string
+    {
+        return __('nav.groups.content');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('project.page.nav_label');
+    }
+
+    public static function getLabel(): ?string
+    {
+        return __('project.page.nav_label');
+    }
+
+    public static function getPluralLabel(): ?string
+    {
+        return __('project.page.nav_label');
+    }
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -37,7 +56,7 @@ class ProjectResource extends Resource
         return $form->schema([
             Forms\Components\Grid::make(3)->schema([
                 Forms\Components\Select::make('section_id')
-                    ->label('Section')
+                    ->label(__('project.form.section'))
                     ->relationship(
                         name: 'section',
                         titleAttribute: 'title',
@@ -50,28 +69,30 @@ class ProjectResource extends Resource
                     ->required(),
 
                 Forms\Components\Select::make('locale')
-                    ->label('Locale')
+                    ->label(__('project.form.locale'))
                     ->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română'])
                     ->default('en')
                     ->required(),
 
                 Forms\Components\TextInput::make('position')
-                    ->label('Position')
+                    ->label(__('project.form.position'))
                     ->numeric()
                     ->default(0)
                     ->required(),
             ]),
 
             Forms\Components\TextInput::make('title')
+                ->label(__('project.form.title'))
                 ->required()
                 ->maxLength(255),
 
             Forms\Components\Textarea::make('description')
+                ->label(__('project.form.description'))
                 ->rows(4)
                 ->nullable(),
 
             Forms\Components\FileUpload::make('image_path')
-                ->label('Image')
+                ->label(__('project.form.image'))
                 ->image()
                 ->directory('projects')
                 ->nullable(),
@@ -90,28 +111,30 @@ class ProjectResource extends Resource
             )
             ->groups([
                 Group::make('section.title')
-                    ->label('Section')
+                    ->label(__('project.form.section'))
                     ->collapsible()
                     ->titlePrefixedWithLabel(false),
             ])
             ->defaultGroup('section.title')
             ->defaultSort('position')
-
             ->headerActions([
                 Tables\Actions\Action::make('export')
-                    ->label('Экспорт данных')
+                    ->label(__('project.export.action'))
                     ->icon('heroicon-o-arrow-down-tray')
-                    ->modalHeading('Экспорт данных')
+                    ->modalHeading(__('project.export.heading'))
                     ->form([
                         Forms\Components\Select::make('scope')
-                            ->label('Что экспортировать?')
-                            ->options(['all' => 'Все секции', 'section' => 'Только выбранную секцию'])
+                            ->label(__('project.export.scope'))
+                            ->options([
+                                'all'     => __('project.export.scope_all'),
+                                'section' => __('project.export.scope_section'),
+                            ])
                             ->default('all')
                             ->required()
                             ->live(),
 
                         Forms\Components\Select::make('section_id')
-                            ->label('Секция')
+                            ->label(__('project.export.section'))
                             ->options(fn () => ContentSection::query()
                                 ->where('type', $type)
                                 ->orderBy('position')
@@ -122,19 +145,22 @@ class ProjectResource extends Resource
                             ->searchable(),
 
                         Forms\Components\Select::make('format')
-                            ->label('Формат')
-                            ->options(['pdf' => 'PDF', 'xml' => 'XML'])
+                            ->label(__('project.export.format'))
+                            ->options([
+                                'pdf' => __('project.export.pdf'),
+                                'xml' => __('project.export.xml'),
+                            ])
                             ->default('pdf')
                             ->required(),
                     ])
                     ->action(function (array $data, $livewire) use ($type) {
                         $columns = [
-                            'section.title' => 'Section',
-                            'locale'        => 'Locale',
-                            'position'      => 'Position',
-                            'title'         => 'Title',
-                            'description'   => 'Description',
-                            'updated_at'    => 'Updated at',
+                            'section.title' => __('project.export.columns.section'),
+                            'locale'        => __('project.export.columns.locale'),
+                            'position'      => __('project.export.columns.position'),
+                            'title'         => __('project.export.columns.title'),
+                            'description'   => __('project.export.columns.description'),
+                            'updated_at'    => __('project.export.columns.updated'),
                         ];
 
                         $query = method_exists($livewire, 'getFilteredTableQuery')
@@ -148,8 +174,9 @@ class ProjectResource extends Resource
                         }
 
                         $rows = $query->get();
-                        $title = 'Projects export';
-                        $subtitle = now()->format('Y-m-d H:i');
+
+                        $title = __('project.export.title');
+                        $subtitle = now()->format(__('project.export.subtitle_fmt'));
 
                         if (($data['format'] ?? 'pdf') === 'xml') {
                             $xml = TableExport::toXml('export', 'row', $columns, $rows);
@@ -168,17 +195,33 @@ class ProjectResource extends Resource
                         );
                     }),
             ])
-
             ->columns([
-                Tables\Columns\TextColumn::make('locale')->badge()->sortable(),
-                Tables\Columns\TextColumn::make('position')->sortable(),
-                Tables\Columns\ImageColumn::make('image_path')->square()->label('Image'),
-                Tables\Columns\TextColumn::make('title')->searchable()->limit(40),
-                Tables\Columns\TextColumn::make('updated_at')->dateTime('Y-m-d H:i')->sortable(),
+                Tables\Columns\TextColumn::make('locale')
+                    ->label(__('project.table.locale'))
+                    ->badge()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('position')
+                    ->label(__('project.table.position'))
+                    ->sortable(),
+
+                Tables\Columns\ImageColumn::make('image_path')
+                    ->label(__('project.table.image'))
+                    ->square(),
+
+                Tables\Columns\TextColumn::make('title')
+                    ->label(__('project.table.title'))
+                    ->searchable()
+                    ->limit(40),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label(__('project.table.updated_at'))
+                    ->dateTime('Y-m-d H:i')
+                    ->sortable(),
             ])
             ->filters([
                 SelectFilter::make('section_id')
-                    ->label('Section')
+                    ->label(__('project.filters.section'))
                     ->relationship(
                         name: 'section',
                         titleAttribute: 'title',
@@ -188,7 +231,7 @@ class ProjectResource extends Resource
                     ),
 
                 SelectFilter::make('locale')
-                    ->label('Locale')
+                    ->label(__('project.filters.locale'))
                     ->options(['en' => 'English', 'ru' => 'Русский', 'ro' => 'Română']),
             ])
             ->actions([

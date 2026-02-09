@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Обслуживание</title>
+    <title>{{ __('maintenance.public.title') }}</title>
     <style>
         body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
         font-family:ui-sans-serif,system-ui;background:#0b0f12;color:#fff;}
@@ -17,9 +17,11 @@
 </head>
 <body>
 <div class="card">
-    <div class="badge">🛠 Режим обслуживания</div>
-    <h1>Сайт временно недоступен</h1>
-    <div class="muted">{{ $message }}</div>
+    <div class="badge">🛠 {{ __('maintenance.public.badge') }}</div>
+    <h1>{{ __('maintenance.public.heading') }}</h1>
+    <div class="muted">
+        {{ $message ?: __('maintenance.public.default_message') }}
+    </div>
 </div>
 </body>
 </html>

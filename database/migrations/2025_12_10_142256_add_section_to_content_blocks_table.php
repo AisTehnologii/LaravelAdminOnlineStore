@@ -5,18 +5,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
-    {
+    
+public function up(): void
+{
+    if (Schema::hasTable('content_blocks')) {
         Schema::table('content_blocks', function (Blueprint $table) {
-            // если колонки ещё нет — добавляем
-            if (! Schema::hasColumn('content_blocks', 'section')) {
-                $table->string('section')
-                    ->default('home.general')
-                    ->index()
-                    ->after('id');
+            if (!Schema::hasColumn('content_blocks', 'section')) {
+                $table->string('section')->default('home.general')->after('id');
             }
         });
     }
+}
 
     public function down(): void
     {

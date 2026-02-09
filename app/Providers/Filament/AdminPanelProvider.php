@@ -19,23 +19,40 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use App\Http\Middleware\UpdateLastSeen;
+use Filament\Navigation\MenuItem;
 
 use Filament\Support\Facades\FilamentView;
 class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
+        $cur = app()->getLocale();
         return $panel
             ->default()
             ->id('admin')
             ->path('admin')
             ->login()
-
+->authGuard('web')
             ->brandName('Marga Admin')
 
             ->brandLogo(fn () => view('filament.logo'))
+->userMenuItems([
+    'locale_ru' => MenuItem::make()
+        ->label('Русский')
+        ->icon('heroicon-o-language')
+        ->url('/set-locale/ru'),
 
-            ->darkMode(false)
+    'locale_ro' => MenuItem::make()
+        ->label('Română')
+        ->icon('heroicon-o-language')
+        ->url('/set-locale/ro'),
+
+    'locale_en' => MenuItem::make()
+        ->label('English')
+        ->icon('heroicon-o-language')
+        ->url('/set-locale/en'),
+])
+            
 
             ->colors([
                 'primary' => Color::Amber,
@@ -67,23 +84,17 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 Widgets\AccountWidget::class,
             ])
-            ->middleware([
-                EncryptCookies::class,
-                AddQueuedCookiesToResponse::class,
-                StartSession::class,
-                AuthenticateSession::class,
-                ShareErrorsFromSession::class,
-                VerifyCsrfToken::class,
-                SubstituteBindings::class,
-                DisableBladeIconComponents::class,
-                DispatchServingFilamentEvent::class,
-                UpdateLastSeen::class,
-            ])
+           ->middleware([
+    DisableBladeIconComponents::class,
+    DispatchServingFilamentEvent::class,
+    UpdateLastSeen::class,
+    \App\Http\Middleware\SetLocaleFromRequest::class,
+])
+->authMiddleware([
+    Authenticate::class,
+])
             ->plugins([
                 FilamentShieldPlugin::make(),
-            ])
-            ->authMiddleware([
-                Authenticate::class,
             ]);
     }
 }

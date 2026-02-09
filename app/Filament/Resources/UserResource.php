@@ -9,20 +9,14 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
-
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-users';
-    protected static ?string $navigationGroup = 'Admin';
-    protected static ?string $navigationLabel = 'Users';
-    protected static ?string $modelLabel      = 'User';
-    protected static ?string $pluralModelLabel = 'Users';
+    protected static ?string $navigationIcon = 'heroicon-o-users';
 
     /** Только главный админ (is_admin=1) видит этот ресурс */
     public static function canAccess(): bool
@@ -30,41 +24,63 @@ class UserResource extends Resource
         return (bool) (auth()->user()?->is_admin);
     }
 
+    /** Навигация (левое меню) */
+    public static function getNavigationGroup(): ?string
+    {
+        // было: 'Admin'
+        return __('nav.groups.user');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('user.navigation_label');
+    }
+
+    public static function getPluralLabel(): ?string
+    {
+        return __('user.plural_label');
+    }
+
+    public static function getLabel(): ?string
+    {
+        return __('user.model_label');
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\Section::make('User')
+            Forms\Components\Section::make(__('user.sections.user'))
                 ->schema([
                     Forms\Components\TextInput::make('name')
+                        ->label(__('user.fields.name'))
                         ->required()
                         ->maxLength(255),
 
                     Forms\Components\TextInput::make('email')
+                        ->label(__('user.fields.email'))
                         ->email()
                         ->required()
                         ->maxLength(255)
                         ->unique(ignoreRecord: true),
 
                     Forms\Components\Toggle::make('is_admin')
-                        ->label('Super admin (full access)')
-                        ->helperText('Полный доступ ко всей админке, независимо от ролей.'),
+                        ->label(__('user.fields.is_admin'))
+                        ->helperText(__('user.helpers.is_admin')),
                 ])
                 ->columns(2),
 
-            Forms\Components\Section::make('Security')
+            Forms\Components\Section::make(__('user.sections.security'))
                 ->schema([
                     Forms\Components\TextInput::make('password')
-                        ->label('Password')
+                        ->label(__('user.fields.password'))
                         ->password()
                         ->revealable()
-                        ->helperText('Оставь пустым, если не нужно менять пароль.')
-                        // В БД пишем только если заполнено
+                        ->helperText(__('user.helpers.password'))
                         ->dehydrated(fn ($state) => filled($state))
-                        // cast hashed в модели сам захеширует
                         ->dehydrateStateUsing(fn ($state) => filled($state) ? $state : null),
 
                     Forms\Components\TextInput::make('password_confirmation')
-                        ->label('Confirm password')
+                        ->label(__('user.fields.password_confirmation'))
                         ->password()
                         ->revealable()
                         ->dehydrated(false)
@@ -72,26 +88,23 @@ class UserResource extends Resource
                 ])
                 ->columns(2),
 
-            Forms\Components\Section::make('Role')
+            Forms\Components\Section::make(__('user.sections.role'))
                 ->schema([
                     Forms\Components\Select::make('role')
-                        ->label('Role')
+                        ->label(__('user.fields.role'))
                         ->options(fn () => Role::query()->pluck('name', 'name')->toArray())
                         ->searchable()
                         ->required()
                         ->default('content-maker')
-                        ->helperText('Назначь роль пользователю. Для is_admin можно оставить admin.')
+                        ->helperText(__('user.helpers.role'))
                         ->dehydrated(false)
                         ->afterStateHydrated(function ($component, $record) {
-    if (! $record) return;
-    $component->state($record->roles()->pluck('name')->first());
-})
-
-                        ->saveRelationshipsUsing(function (\App\Models\User $record, $state) {
-    // назначаем ровно выбранную роль
-    $record->syncRoles([$state]);
-})
-
+                            if (! $record) return;
+                            $component->state($record->roles()->pluck('name')->first());
+                        })
+                        ->saveRelationshipsUsing(function (User $record, $state) {
+                            $record->syncRoles([$state]);
+                        }),
                 ]),
         ]);
     }
@@ -101,36 +114,41 @@ class UserResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('id')
+                    ->label(__('user.table.id'))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('name')
+                    ->label(__('user.table.name'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('email')
+                    ->label(__('user.table.email'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_admin')
-                    ->boolean()
-                    ->label('Super'),
+                    ->label(__('user.table.super'))
+                    ->boolean(),
 
                 Tables\Columns\TextColumn::make('roles.name')
-                    ->label('Role')
+                    ->label(__('user.table.role'))
                     ->badge()
-                    ->formatStateUsing(fn ($state) => $state ? Str::upper($state) : '—'),
+                    ->formatStateUsing(fn ($state) => $state ? Str::upper($state) : __('user.common.dash')),
             ])
             ->filters([])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->label(__('user.actions.edit')),
 
-                // Удалять пользователей можно (если хочешь запретить — убери DeleteAction)
                 Tables\Actions\DeleteAction::make()
-                    ->visible(fn (User $record) => auth()->id() !== $record->id), // нельзя удалить себя
+                    ->label(__('user.actions.delete'))
+                    ->visible(fn (User $record) => auth()->id() !== $record->id),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make()
+                    ->label(__('user.actions.delete_selected'))
                     ->visible(fn () => true),
             ]);
     }
